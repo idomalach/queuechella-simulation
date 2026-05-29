@@ -25,9 +25,9 @@ Narrative language **Hebrew** (mirrors the lecturer's example); code comments **
 ## 2. Working environment & Colab bridge
 
 - **Master notebook:** `Queuechella_Simulation.ipynb` at project root (79 cells; M0 skeleton built, M2/M3 filled, M4 stubs). Developed locally in VSCode, delivered in Colab.
-- **Diagrams:** Excalidraw MCP tools (`mcp__claude_ai_Excalidraw__*`) — the event diagram + 3 handling diagrams. Build → `export_to_excalidraw` share URL → download PNGs manually into `diagrams/` → base64-embed into notebook §3. (The MCP renders to the UI and shares a URL; it does not write PNG files directly.)
+- **Diagrams:** Excalidraw MCP tools (`mcp__claude_ai_Excalidraw__*`) — the event diagram + 3 handling diagrams. Build → `export_to_excalidraw` share URL → download PNGs manually into `diagrams/` → base64-embed into notebook §3. (The MCP renders to the UI and shares a URL; it does not write PNG files directly.) **Diagram build workspace:** `diagrams/build/` — `EVENT_NODE_EDGE_SPEC.md` (authoritative v2.0 node+edge spec & decision log; the full per-handler edge contract + routing matrix), `README.md` (build pipeline + Excalidraw-MCP gotchas), and the `gen_excali_event.py → event_layout_mock.py → to_native_min.py → export_to_excalidraw` pipeline.
 - **xlsx data:** `samples_for_simulation.xlsx` at root. At submission, mirror to a **public GitHub raw URL** for Colab (no upload needed); dev uses the local relative path.
-- **Dependencies:** `pandas numpy scipy matplotlib openpyxl jupyter` (in a venv under `~/venvs/`, never inside this iCloud-synced folder).
+- **Dependencies:** `pandas numpy scipy matplotlib openpyxl jupyter` (in a venv under `~/venvs/`, never inside this iCloud-synced folder). **NumPy 2.x** — `np.trapz` was removed; use `np.trapezoid` (the notebook + Colab run NumPy 2.x).
 
 ---
 
@@ -55,7 +55,7 @@ Final cleanup: regex-find every `INTERNAL — DELETE BEFORE SUBMISSION` and dele
 ### 1. מבוא · 2. תיאור המערכת והנחות (+ Design Decisions Log internal div)
 ### 3. תרשים אירועים ותרשימי טיפול (23-node event diagram + 3 handling diagrams)
 ### 4. בחירת מדדים (KPIs) · 5. התאמת התפלגות [M2 done] · 6. אלגוריתמי דגימה [M3]
-[code]  Sampler  ·  6.8 DJ A/R validation
+[code]  RNGStreams (hoisted — before Sampler)  ·  [code] Sampler  ·  6.8 DJ A/R validation
 ### 7. מחלקת לקוח · 8. מחלקות אורחים · 9. מחלקות מתקנים · 10. תור · 11. מעקב מדדים  [M4]
 ### 12. מחלקת אירועים (Event base) [PARTNERS extend → 23 subclasses]
 ### 13. הסימולציה (skeleton) [PARTNERS fill run loop]
@@ -79,10 +79,10 @@ Final cleanup: regex-find every `INTERNAL — DELETE BEFORE SUBMISSION` and dele
 | **Couple** | **Exp, 60/hour ⇒ λ=1/min, mean inter-arrival 1 min** | 10:00–16:00 | Day 1 or 2; stays iff **avg satisfaction > 7** at end of day 1 | 2 |
 | **Single** | Exp, 500/day (windowed over 09:00–16:00 ⇒ λ≈500/420 per min) | 09:00–16:00 | one day only (1 or 2) | 1 |
 
-> **Couple rate is the one easy-to-get-wrong number.** Spec *"תוחלת של 60 בשעה"* parallels Single's *"תוחלת של 500 ביום"* (= count per period) ⇒ **60 couples/hour**, mean inter-arrival **1 minute** (~360/day). Not 1/hour. CONFIG must set `couple_arrival_lambda = 1.0` (it currently reads `1.0/60.0` — a live bug to fix in M3).
+> **Couple rate is the one easy-to-get-wrong number.** Spec *"תוחלת של 60 בשעה"* parallels Single's *"תוחלת של 500 ביום"* (= count per period) ⇒ **60 couples/hour**, mean inter-arrival **1 minute** (~360/day). Not 1/hour. CONFIG sets `couple_arrival_lambda = 1.0` — **fixed in M3** (was `1.0/60.0`, which gave ~6 couples/day; verified mean inter-arrival 1.002 min).
 
 **Per-entity behavior:**
-- **FriendsGroup** — strict two-phase itinerary: **Phase 1** = one show of each genre (Main, Side, DJ); **Phase 2** = all 4 stations (Photo, Charging, Merch, BodyArt). Shortest-queue pick *within* the current phase. (Spec: *"לאחר שהות מלאה בכל הופעה יעברו בכלל העמדות"*.)
+- **FriendsGroup** — strict two-phase itinerary: **Phase 1** = one show of each genre (Main, Side, DJ); **Phase 2** = all 4 stations (Photo, Charging, Merch, BodyArt). Shortest-queue pick *within* the current phase. (Spec: *"לאחר שהות מלאה בכל הופעה יעברו בכלל העמדות"*.) **Overnight (E4):** an FG that bought lodging (Bernoulli 0.7 at arrival) and finishes its itinerary on day 1 does **not** exit — it stays overnight and **restarts a fresh itinerary on day 2** (`Day2Resume` re-inits and resumes it at a show), since the spec says staying groups *"וימשיכו ליום הבא"*. An FG **without** lodging exits via `EndOfStay` when its itinerary exhausts (decision #7).
 - **Couple** — open-ended alternation show→station→show→…; show step = uniform{Main, Side} (no DJ — couples dislike electronic); station step = uniform{Photo, Charging, Merch, BodyArt}. Runs until EndOfDay1/EndOfStay.
 - **Single** — fixed itinerary: Merch first, then 2 Main + 2 Side + 1 DJ shows (shortest-queue among remaining required shows). Leaves when itinerary exhausts.
 - **Group movement:** members move as one unit — nobody proceeds to the next activity until all finish the current one. **Food court is the only exception** (members split across restaurants; see §5.5).
@@ -92,11 +92,11 @@ Final cleanup: regex-find every `INTERNAL — DELETE BEFORE SUBMISSION` and dele
 | Resource | Capacity | Service mode | Notes |
 |---|---|---|---|
 | Entry | 5 booths | **per-member, parallel** | scan `U(1.5,3)` + security `Exp(mean 2)` back-to-back, one `EndEntry` per member. **No abandonment.** Auto-entry alt zeros the scan term. |
-| MainStage | 200 | per-entity | mainstream; show duration **Normal**(M2) via Box-Muller; 10-min break; spatial order = entry order; **farthest-10 early exit**; rolling admission. |
-| SideStage | 100 | per-entity | indie; show `U(20,30)`; 5-min break; batch admission at show start. |
+| MainStage | 200 | per-entity | mainstream; show duration **Normal**(M2) via Box-Muller; 10-min break; spatial order = entry order; **farthest-10 early exit**; **admission = batch at ShowStart + mid-show walk-in if running under-cap (D3) + vacated-spot rolling admit** — each admitted entity (any path) gets its own `EarlyExitCheck`+15. |
+| SideStage | 100 | per-entity | indie; show `U(20,30)`; 5-min break; **batch at ShowStart + mid-show walk-in if running under-cap (D3)** — no farthest-10. |
 | DJstage | 70 | per-entity | electronic; continuous (no shows); stay-time piecewise PDF, **A-R sampling**; roll-admit as capacity frees. |
 | PhotoStation | 3, shared queue | **per-entity** | one photo per visit; one shared satisfaction roll. |
-| ChargingStation | 150 | per-member, parallel | battery on arrival `N(40,15)`; charge time `f(t)` with α=100/(100−battery). |
+| ChargingStation | 150 | per-member, parallel | battery on arrival `N(40,15)` clamped **[0,99]** (only `b<100` is mandatory — avoids α=100/0; `b=0` is valid → α=1 → charge time Uniform(0,40)); charge time `f(t)` with α=100/(100−battery). |
 | MerchTent | 7 | per-member, parallel | service `U(2,6)`; per-member item rolls. |
 | BodyArt | 2 artists | per-member, parallel | glitter/neon/henna; artist breaks 15 min after every 10 drawings. |
 | FoodCourt (Pizza/Burger/Asian) | 1 register each | per-member (per food-unit) | 13:00–15:00 decision window, **one stop per entity/day**, **no abandonment**, parallel kitchen, pizza consolidation — see §5.5. |
@@ -124,7 +124,7 @@ Movement and queue position are **per-entity**; some service venues run **per-me
 
 ### 5.5 Food court — detailed model
 
-**One food stop per entity per day.** An entity becomes eligible the first time it **finishes an activity during 13:00–15:00** with its entity-level gate `food_done_today` still False. At that moment the gate is **set to True immediately** (so it cannot re-fire, even between the food-court sub-steps), and the entity makes its single food stop: **per member independently**, roll **hungry (70%)**; if hungry, pick a food type — **burger 3/8, pizza 1/4, asian 3/8**. After the stop the entity never returns to the food court that day — **even members who declined get no second chance**, and "just finished eating" can't loop back into another food visit. If no member is hungry, the stop still counts as made (the gate stays set). The gate **resets at day 2** for overnight stayers (via `Day2Resume`).
+**One food stop per entity per day.** An entity becomes eligible the first time it **finishes a real itinerary activity during 13:00–15:00** with its entity-level gate `food_done_today` still False. **(D4: eating is never the first festival activity — `EndEntry` does not count; the food gate is checked at activity-completion handlers (shows / DJ / stations / abandon), not at Entry.)** At that moment the gate is **set to True immediately** (so it cannot re-fire, even between the food-court sub-steps), and the entity makes its single food stop: **per member independently**, roll **hungry (70%)**; if hungry, pick a food type — **burger 3/8, pizza 1/4, asian 3/8**. After the stop the entity never returns to the food court that day — **even members who declined get no second chance**, and "just finished eating" can't loop back into another food visit. If no member is hungry, the stop still counts as made (the gate stays set). The gate **resets at day 2** for overnight stayers (via `Day2Resume`).
 
 Eating is unconstrained (picnic tables / grass / walking) — only the **single register per restaurant** is a queue. Prep is a **parallel-kitchen delay** (the spec gives no cook capacity, only the register). Register service `N(5,1.5)` covers **order + payment** (no separate payment event). Each non-pizza order draws its own register / prep / eating samples.
 
@@ -209,13 +209,25 @@ Built by passing each candidate event through two tests — **time-advance** (do
 | 22 | `Day2Resume` | `EndOfDay1` per overnight stayer, at 09:00 day 2 | reset `food_done_today` (new food stop allowed); re-evaluate next activity (in case stuck in a stale show queue). |
 
 ### Group E — Departure, 1
-**23. `EndOfStay`** (per entity) — scheduled (usually at `now`) when a visit ends: itinerary exhausted (FG/Single), `overnight_decision == "leave"` at the moment the current activity completes, or `EndOfFestival` for day-2 stragglers. Logs every member's final satisfaction into `kpi.final_satisfactions`, marks the entity departed, frees any held resources.
+**23. `EndOfStay`** (per entity) — scheduled (usually at `now`) when a visit ends: itinerary exhausted (FG-without-lodging / Single), `overnight_decision == "leave"` at the moment the current activity completes, or `EndOfFestival` for day-2 stragglers. Logs every member's final satisfaction into `kpi.final_satisfactions`, marks the entity departed, frees any held resources. **D5 (diagram):** drawn as a **receive-only convergence node** — every `X→stations` edge folds in `X→EndOfStay` (any router reaching the cluster can also end a visit), so arrows point only *into* it; the one explicit incoming edge is `EndOfFestival→EndOfStay`. In code it's an ordinary terminal event (`select_next_activity` returns `None` → schedule `EndOfStay`). **Not** reachable from `EndEntry` (every entity has ≥1 activity) or `Day2Resume` (stayers restart at a show, E4).
 
 ### What is NOT a separate node (folded into handlers)
 `JoinQueue`, `StartService`, `BreakStart`, `LunchDecision`, `OvernightDecision`, every satisfaction/experience roll, food-type choice, **fill-to-max admission** (a sub-routine called from each `ShowEnd`/`EndService`/`EarlyExitCheck`/`BreakEnd`), lunch-window open/close. None advance time independently.
 
 ### Termination patterns used
-A — hard end at fixed time (`EndOfDay1`, `EndOfFestival`: init-arrows). B — stop source, drain (arrival streams stop self-scheduling at window-end; lunch window is a guard). C — service-completion (`ShowStart`→`ShowEnd`; `EndService@BodyArt`→`BreakEnd`; MainStage entry→`EarlyExitCheck`).
+A — fixed-clock **init** events (`EndOfDay1`, `EndOfFestival`: zigzag-seeded at t=0) that **drain rather than hard-stop (C2)** — in-flight events finish (the clock runs past 20:00), their end-handlers route entities to `EndOfStay`, and the day-boundary handler only sweeps idle/stuck entities (those with no pending completion). The run loop keeps popping the FEL until drained. B — stop source, drain (arrival streams stop self-scheduling at window-end; lunch window is a guard). C — service-completion (`ShowEnd`→next `ShowStart`; `EndService@BodyArt`→`BreakEnd`; MainStage admission→`EarlyExitCheck`).
+
+### Directed-edge graph (scheduling structure)
+The full per-handler edge contract + per-entity routing matrix are the authoritative reference in **`diagrams/build/EVENT_NODE_EDGE_SPEC.md`** (§4 by-source-event; §6 routing matrix). Structure summary:
+
+- **Edge semantics (P2):** `A → B` = "when A fires it *may* schedule B" (condition in the handler) — **never** "an entity flows from A to B". Routing into a *show* creates no event (entity joins a show queue; admission waits for `ShowStart` or a walk-in) ⇒ no edge, *except* a MainStage walk-in, which schedules `EarlyExitCheck` ⇒ edge.
+- **Init (zigzag), 7:** the 3 arrivals, the 2 `ShowStart`s, `EndOfDay1`, `EndOfFestival` — seeded into the FEL at t=0.
+- **Self-loops, 10(+1):** 3 arrivals, `EndEntry`, `EndAtDJstage`, the 4 `EndService@station`s, `EndOrder`, and (E2) `EarlyExitCheck` (a vacated-spot roll-admit pulls the queue head into the show and schedules *its* +15). None on `EndPrep`/`EndEating`/`ShowEnd`.
+- **Show cycle (E1):** `ShowStart ↔ ShowEnd` is mutual — **`ShowEnd` schedules the next `ShowStart`** at `now+break` (10 main / 5 side); `ShowStart` does **not** self-schedule.
+- **Routing core (diagram device, R1/R2):** the 4 stations + `EndOfStay` are drawn as a `STATIONS` super-node box (4 mutual `station↔box` edges abbreviate the all-to-all K₄). **There is no cluster object in code** — `select_next_activity(E)` returns a *specific* venue.
+- **Node-specific edges (R3 — bind to the node, not the box):** `EndEntry → EndService@Merch` (Single's first stop; **E3 fix** — v1 wrongly had `EndEntry→BodyArt`); `EndService@Merch → EndAtDJstage` (Single Merch→DJ); `EndOfFestival → EndOfStay`.
+- **Day boundary + must-not edges:** `EndOfDay1 → {CoupleArrival, SingleArrival, ShowStart@Main, ShowStart@Side, Day2Resume}`; `EndOfDay1 ✗→ EndOfFestival` (init-seeded, C) and `✗→ FriendsGroupArrival` (day-1 only); no scheduling edge into `ShowStart` except init / the mutual cycle / the day-2 re-seed; `EndEntry ✗→ EndOrder` (D4) and `✗→ stations` (Merch only); `Day2Resume ✗→ stations` (resumes at a show, E4); no edge out of `EndOfStay`.
+- **DJ (E5):** one node `EndAtDJstage` (= `EndDJ` in the build script).
 
 ---
 
@@ -259,7 +271,7 @@ A — hard end at fixed time (`EndOfDay1`, `EndOfFestival`: init-arrows). B — 
 | `EarlyExitCheck` | attendees[-10:] | if in last-10: Bernoulli(0.5) → leave + free spots + roll-admit | — |
 | `BreakEnd@BodyArt` | artist.on_break | on_break=False; dispatch | — |
 | `EndOfDay1` | all live entities, clock | stop streams/shows; per-entity overnight decision; pull leaving show-queue stragglers; schedule day-2 bootstrap | revenue[lodging], day1_snapshot |
-| `EndOfFestival` | live entities | iterate EndOfStay for stragglers | finalize final_satisfactions |
+| `EndOfFestival` | live entities, FEL | **drain-sweep (C2):** in-flight finishes; route only entities with no pending completion → EndOfStay; keep draining FEL past 20:00 | finalize final_satisfactions |
 | `Day2Resume` | entity ref | re-select next activity | — |
 | `EndOfStay` | members' satisfaction | mark departed; free resources | final_satisfactions |
 
@@ -301,7 +313,7 @@ TRIGGER: init-arrow 09:00 day 1; recursively by previous ShowEnd@MainStage at no
 3. current_show ← {genre, start: now, end: now+duration}
 4. schedule ShowEnd@MainStage at now + duration
 5. for E in admitted: schedule EarlyExitCheck(E) at now + 15
-6. next_start ← now + duration + 10; if shows_scheduling_active ∧ next_start < day_end(day): schedule ShowStart@MainStage at next_start
+6. (next ShowStart is NOT scheduled here — E1: it is owned by ShowEnd@MainStage at showEnd + 10-min break. ShowStart never self-schedules.)
 ACCUMULATE: attendance[Main] += Σ size; wait/max_wait per admitted; queue-length.
 ```
 *EarlyExitCheck: at fire, if E ∈ attendees[-10:], Bernoulli(0.5) → leave + free size + try_admit + schedule E's next activity; else no-op (pushed off the back by later arrivals).*
@@ -333,26 +345,32 @@ Spec-interpretation judgment calls; all defensible, graders may probe at the def
 1. **Queue abandonment — per-entity timer, per-member penalty, commit-on-first.** Timer from queue-join; cancelled when the first member starts service. On fire, queued members are pulled, every member loses `wait_penalty` (clamp 0), entity → next/EndOfStay.
 2. **Abandonment at exactly 4 venues** (Photo, Charging, Merch, BodyArt); not shows/Entry/Food (professor-confirmed).
 3. **MainStage rolling** admission; SideStage batch-at-start; DJ continuous. Fill-to-max scan head→tail.
-4. **Farthest-10 early exit:** `EarlyExitCheck` at entry+15; if still in `attendees[-10:]`, **Bernoulli(0.5)** → leave. **Spec-mandated** (*"…ויפנו למתחם בהסתברות 0.5"*).
+4. **Farthest-10 early exit:** `EarlyExitCheck` at entry+15; if still in `attendees[-10:]`, **Bernoulli(0.5)** → leave + free spots + roll-admit. **Spec-mandated** (*"…ויפנו למתחם בהסתברות 0.5"*). **E2:** the roll-admit pulls the queue head into the running show and schedules *its own* +15 `EarlyExitCheck` (self-loop); every admission path (batch / walk-in / rolling) arms a +15 timer.
 5. **Per-member parallel service** (Entry/Charging/Merch/BodyArt): finished members free their server immediately; the entity's next-activity decision waits for the last member (§5.4).
 6. **Itineraries:** FG phased (3 shows → 4 stations); Single fixed (Merch → 2 Main + 2 Side + 1 DJ); Couple open-ended uniform alternation, no DJ.
-7. **Exit:** Singles + FG leave via `EndOfStay` when itinerary exhausts; Couples only at EndOfDay1/EndOfStay/EndOfFestival.
+7. **Exit (E4):** Singles + FG-**without**-lodging leave via `EndOfStay` when their itinerary exhausts. An FG that **bought lodging** does **not** exit at itinerary-end on day 1 — it stays overnight and **restarts a fresh itinerary on day 2** (`Day2Resume` re-inits, resumes at a show). Couples leave only at EndOfDay1/EndOfStay/EndOfFestival.
 8. **Lodging revenue:** FG pre-buys at arrival (Bernoulli 0.7 → ₪700 bundle); Couple decides at EndOfDay1 (**avg > 7**) → ₪250 (per-couple); Singles never stay.
 9. **Merch per-member item rolls** (0.8/0.4/0.9/0.3). A 5-person group can buy 5 shirts.
 10. **PhotoStation per-entity:** one photo, one roll. Satisfied (0.7) → every member +2, +₪30 once; else (0.3)×(0.5) → every member −0.5. (Spec *"היישות מרוצה"*.)
 11. **Entry: no abandonment**; 5 booths, scan+security per member; auto-entry alt zeros the scan.
 12. **Food court (§5.5):** no abandonment; **one food stop per entity per day** — entity-level gate `food_done_today` set the moment the entity first finishes an activity in 13:00–15:00, so it never loops back (even members who declined get no second chance, even if nobody ate). 70% hungry per member; members may split across restaurants; parallel kitchen; **pizza consolidation** (individual = 1 person; P≥2 → `ceil(P/3)` family pizzas, one queuer + one sample-set each, covering up to 3); regroup at `max(EndEating)`; gate resets day 2.
-13. **Day transitions:** `EndOfDay1` (stop streams/shows, overnight decisions, snapshot, schedule day-2 bootstrap + `Day2Resume`); `EndOfFestival` (hard end); day-2 arrival rates = day-1 for Couple/Single.
+13. **Day transitions:** `EndOfDay1` (stop streams/shows, overnight decisions, snapshot, schedule day-2 bootstrap + `Day2Resume`). **`EndOfFestival` is an init-seeded event (C), NOT scheduled by `EndOfDay1`** (avoids double-scheduling), and it **drains (C2)** — in-flight finishes (clock runs past 20:00), only idle/stuck entities are swept to `EndOfStay`; not a hard stop. `Day2Resume` resets `food_done_today` and resumes the stayer at a show (E4). Day-2 arrival rates = day-1 for Couple/Single.
 14. **Show satisfaction:** good (0.5) `+(G−1)/2+(T−1)/19`, G∈{3,2,1}, T=integer end-hour; bad (0.5) −1. Clamp [0,10].
 15. **Just-in-time sampling:** draw each quantity at the moment of use (service start, not queue-join); inter-arrivals self-scheduled on the current arrival firing. CRN-friendly.
 16. **Satisfaction clamped to [0,10]** in every mutating handler.
+17. **Mid-show walk-in (D3):** an entity routed to a running show with free capacity enters immediately (both stages); shows may also start under-cap. MainStage walk-in arms the entrant's `EarlyExitCheck`+15; SideStage has no farthest-10. Generalizes the spec's vacated-spot rule.
+18. **Eating ≠ first activity (D4):** the food gate is evaluated only at real activity-completion handlers, never at `EndEntry`.
+19. **Show-cycle ownership (E1):** `ShowEnd` schedules the next `ShowStart` at `now + break` (10 main / 5 side); `ShowStart` never self-schedules (drawn as the `ShowStart↔ShowEnd` mutual edge).
+20. **`EndOfStay` convergence (D5):** one departure node consolidating exit logic from ~10 sources; on the diagram it's receive-only (every `→stations` edge folds in `→EndOfStay`). In code it's an ordinary terminal event.
+21. **ChargingStation battery clamp `[0,99]`:** only `b<100` is mathematically required (avoids α=100/0); `b=0` is valid (α=1 → Uniform(0,40)), so empty-battery arrivals are allowed.
+22. **Routing fix (E3):** Single's first stop after Entry is Merch (`EndEntry→Merch`); the v1 diagram's `EndEntry→BodyArt` was spurious. DJ is one node `EndAtDJstage` (E5).
 
 ---
 
 ## 10. Milestones
 
-### M0 — Setup ✅ (smoke-test pending)
-Venv + deps; `diagrams/`; notebook skeleton; `instructions_coverage.md`; deletion-checklist note. Remaining: top-to-bottom smoke run, xlsx loads.
+### M0 — Setup ✅
+Venv + deps; `diagrams/`; notebook skeleton; `instructions_coverage.md`; deletion-checklist note. **Smoke run passes** — full top-to-bottom `nbconvert` execution, 0 errors, xlsx loads, DJ A-R empirical acceptance 0.374 ≈ 3/8 (M0–M4-skeleton level; the M4 run loop is still a partner stub).
 
 ### M1 — Pre-work diagrams ◀ ACTIVE
 Read first: `הרצאה על תכנות אירועים.pdf`, the two event-programming labs (`תרגול 6/7`), and the **example solution's** event + handling diagrams (cell 11) for the accepted layout/abstraction level.
@@ -371,18 +389,20 @@ Read first: `הרצאה על תכנות אירועים.pdf`, the two event-progr
 - **Workflow:** build in Excalidraw MCP → produce a share URL (PNGs downloaded manually into `diagrams/`) → base64-embed in notebook §3.
 - **Verify:** every spec transition/condition/state-update for each diagrammed event appears; cross-check §7 I/O matrix + §9 decisions.
 
-**Build state (2026-05-29):** event diagram **v1** built & exported (Excalidraw); layout + B&W conventions approved. **Arrows have known errors** (missing / reversed / spurious) — root cause: §6/§8 specify edges in prose, not as an explicit list. **Next (v2.0):** (1) validate the node set vs the spec, (2) author a **complete directed-edge table** here in §6/§8 (source→target, type ∈ schedule/init/self/mutual), (3) regenerate via `diagrams/build/` (pipeline: `gen_excali_event.py` → `event_layout_mock.py` check → `to_native_min.py` → `export_to_excalidraw`). Handling diagrams D1/D2/D3 not yet built.
+**Build state (2026-05-29):** event diagram **v1** built & exported (layout + B&W conventions approved) but with known arrow errors. The **v2.0 node set is validated and the complete directed-edge spec is authored** — model decisions folded into §6/§9 here; the full per-handler edge contract + routing matrix live in `diagrams/build/EVENT_NODE_EDGE_SPEC.md`; build pipeline + Excalidraw-MCP gotchas in `diagrams/build/README.md`. **Next (a fresh M1 session):** (1) apply the spec §7 build-delta to `gen_excali_event.py` (STATIONS super-node box replacing the v1 ring; mutual show cycles E1; `EarlyExit` self-loop E2; `EndEntry→Merch` fix E3; honest fan-ins; `Day2Resume` incoming-only E4), re-verify `event_layout_mock.py` `VIOLATIONS=0`, regenerate native, export → URL; (2) build the 3 handling diagrams D1/D2/D3 as flowcharts; (3) embed all 4 as base64 in notebook §3. **Open build choice:** `EarlyExitCheck` has a dense walk-in fan-in (spec §4 #18) — keep it on the event graph, or relegate the walk-in routers to the D2 handling diagram if the mock is too busy (spec §5).
 
-### M2 — Distribution fitting ✅ (verify this session)
-- `FriendsGroup_arrival_intervals` → **Gamma** (α̂≈1.239, β̂≈1.106). Exp rejected (std/mean=0.87, skew=1.29, mode>0). KS D=0.081<0.136; Chi²(k=12) p=0.17.
-- `MainStage_concert_duration` → **Normal** (μ̂≈45.90, σ̂≈8.93). KS D=0.102<0.136; Chi²(k=12) p=0.12.
+### M2 — Distribution fitting ✅ verified (numbers reproduce exactly)
+- `FriendsGroup_arrival_intervals` → **Gamma** (α̂=1.239321, β̂=1.106439). Exp rejected (std/mean=0.87, skew=1.29, mode>0). KS D=0.0813<0.1358; Chi²(df=9)=12.80, p=0.172. FG A-R envelope c=1.130, accept≈88.5%.
+- `MainStage_concert_duration` → **Normal** (μ̂=45.902765, σ̂=8.927433). KS D=0.1024<0.1358; Chi²(df=9)=14.00, p=0.122.
 - Per sheet: MLE derivation (Gamma via Newton-Raphson on `ln α − ψ(α) = ln x̄ − mean(ln xᵢ)`; Normal closed form), KS (unmodified `1.358/√n`), Chi² (equal-prob bins, df=k−1−2, k-sensitivity table), diagnostics (strip / hist+PDF / CDF / Q-Q), Hebrew narrative incl. why Exp was rejected.
 - **Implication:** Gamma has no closed-form inverse CDF → FG arrivals sampled via A-R with Exp envelope (mean-matched, c≈1.13, accept ≈88%).
 
-### M3 — Sampling (`Sampler` class) ✅ (verify + fix this session)
+### M3 — Sampling (`Sampler` class) ✅ verified + fixed (commits ff4c2b7, 66227cf)
 One `Sampler` class taking an `RNGStreams` instance; math in preceding markdown; one-line English code comments.
-- **⚠️ Fix (live bug):** CONFIG `couple_arrival_lambda` `1.0/60.0` → **`1.0`** (60/hr, mean 1 min); fix its comment; update `couple_lodging_threshold` comment "at least one member" → "average".
-- **Positive-normal truncation:** Box-Muller helper rejection-resamples until x>0 for the three Normal *durations* (main show, glitter, food register; trunc ≤~0.04%); `charging_battery` clamps to [1,99] (keeps α=100/(100−b) finite).
+- **Couple rate fixed:** CONFIG `couple_arrival_lambda` `1.0/60.0` → **`1.0`** (60/hr, mean 1 min — verified 1.002 min); `§6` mapping row + the `couple_arrival_interval` docstring fixed; `couple_lodging_threshold` comment "at least one member" → "average".
+- **Positive-normal truncation implemented** (was *missing* — the prior plan described it as present): Box-Muller helper now rejection-resamples until x>0 for the three Normal *durations* (main show, glitter, food register; `food_register N(5,1.5)` had ~0.045% negatives, now strictly positive). `charging_battery` is **clamped to [0,99]** (decision #21), not positive-truncated.
+- **NumPy-2.x:** DJ A-R validation uses `np.trapezoid` (`np.trapz` removed in NumPy 2.x).
+- **RNGStreams hoisted:** the `RNGStreams` class is defined immediately **before** the `Sampler` in §6 (top-to-bottom run needs it first); the `## 12. RNGStreams` markdown header in the M4 region is now just leftover scaffolding.
 
 | Quantity | Distribution | Algorithm |
 |---|---|---|
@@ -404,7 +424,7 @@ Coverage: Inverse ✅, Box-Muller ✅ (4 normals), Composition ✅ (Photo), A-R 
 
 ### M4 — OOP class skeleton (stubs exist; flesh out)
 Read first: OOP-refresher lab (`תרגול 2`) + example cells 13-22 for style.
-- **Customer** (concrete): id, satisfaction (clamp), in_queue_at, in_service_at, service_end_time, food_eaten_today, lunch_decided, done_awaiting_regroup, wants_food, food_choice; `update_satisfaction`, `on_show_end`.
+- **Customer** (concrete): id, satisfaction (clamp), in_queue_at, in_service_at, service_end_time, done_awaiting_regroup, wants_food, food_choice; `update_satisfaction`, `on_show_end`. (The once-per-day food gate `food_done_today` is **entity-level** on `Group`, not per-member.)
 - **Group** (abstract) + FriendsGroup / Couple / Single (sizes, tolerances/penalties, itinerary logic per §5.2).
 - **Activity** (abstract) + MainStage / SideStage / DJstage / PhotoStation / ChargingStation / MerchTent / BodyArt / Entry / FoodCourt (per §5.3).
 - **QueueServer**: FIFO + per-entity abandonment timer (commit-on-first cancel); per-member parallel dispatch (§5.4); tracks wait, queue-length, abandonment.
@@ -435,7 +455,7 @@ Partners pick combinations ≤ ₪1,000,000; overall confidence 0.9; relative pr
 
 ## 12. Files, references, verification, submission
 
-**Files:** `Queuechella_Simulation.ipynb` (deliverable) · `PLAN.md` (this) · `instructions_coverage.md` (spec checklist + handoff) · `Course Project 2026B.pdf` (spec, read-only) · `samples_for_simulation.xlsx` (M2 data) · `example solution.ipynb` (structural + report reference) · `diagrams/` (M1 diagrams + M2 plots).
+**Files:** `Queuechella_Simulation.ipynb` (deliverable) · `PLAN.md` (this) · `instructions_coverage.md` (spec checklist + handoff) · `Course Project 2026B.pdf` (spec, read-only) · `samples_for_simulation.xlsx` (M2 data) · `example solution.ipynb` (structural + report reference) · `diagrams/` (M1 diagrams + M2 plots) · `diagrams/build/` (event-diagram build workspace: `EVENT_NODE_EDGE_SPEC.md` detailed node+edge reference, `README.md` build pipeline + MCP gotchas, pipeline scripts).
 
 **Reused from example:** inverse-transform composition for the piecewise PDF (cell 8) → PhotoStation (identical PDFs); `empirical_cdf`/`ks_test` helpers (cell 5); RTL Hebrew div styling; class-category structure. (The example's Exponential MLE is *not* the FG fit — kept only in an internal div as the tested-and-rejected hypothesis.)
 
