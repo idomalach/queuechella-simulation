@@ -25,7 +25,7 @@ Narrative language **Hebrew** (mirrors the lecturer's example); code comments **
 ## 2. Working environment & Colab bridge
 
 - **Master notebook:** `Queuechella_Simulation.ipynb` at project root (79 cells; M0 skeleton built, M2/M3 filled, M4 stubs). Developed locally in VSCode, delivered in Colab.
-- **Diagrams:** Excalidraw MCP tools (`mcp__claude_ai_Excalidraw__*`) — the event diagram + 3 handling diagrams. Export PNGs to `diagrams/`, embed into notebook §3 via base64 data URI.
+- **Diagrams:** Excalidraw MCP tools (`mcp__claude_ai_Excalidraw__*`) — the event diagram + 3 handling diagrams. Build → `export_to_excalidraw` share URL → download PNGs manually into `diagrams/` → base64-embed into notebook §3. (The MCP renders to the UI and shares a URL; it does not write PNG files directly.)
 - **xlsx data:** `samples_for_simulation.xlsx` at root. At submission, mirror to a **public GitHub raw URL** for Colab (no upload needed); dev uses the local relative path.
 - **Dependencies:** `pandas numpy scipy matplotlib openpyxl jupyter` (in a venv under `~/venvs/`, never inside this iCloud-synced folder).
 
@@ -176,8 +176,8 @@ All deltas clamp the result to [0, 10].
 
 Built by passing each candidate event through two tests — **time-advance** (does it advance the clock, or just gate a decision happening now?) and **split-vs-parameterize** (split on independent scheduling sources or different downstream graphs; parameterize when only numbers differ).
 
-### Group A — Bootstrap (init-arrow), 7
-`FriendsGroupArrival`, `CoupleArrival`, `SingleArrival` (each self-schedules its next; zigzag/stochastic markers) · `ShowStart@MainStage`, `ShowStart@SideStage` (first show 09:00; each `ShowEnd` schedules the next after the break) · `EndOfDay1` (clock-fixed 20:00 day 1) · `EndOfFestival` (clock-fixed 20:00 day 2).
+### Group A — Bootstrap (zigzag init-arrow), 7
+`FriendsGroupArrival`, `CoupleArrival`, `SingleArrival` (zigzag init + solid self-loop scheduling the next arrival) · `ShowStart@MainStage`, `ShowStart@SideStage` (zigzag init at 09:00; each `ShowEnd` schedules the next after the break) · `EndOfDay1` (zigzag init, clock-fixed 20:00 day 1) · `EndOfFestival` (zigzag init, clock-fixed 20:00 day 2). **All 7 get a zigzag arrow because their first instance must be seeded into the FEL at t=0 for the sim to run** — see the convention block in §10/M1.
 
 > Multi-day streams: when a Couple/Single inter-arrival would cross today's window-end and tomorrow-arrivals remain, schedule for tomorrow's window-start. Shows: if the next `ShowStart` would fall after 20:00 on day 1, schedule it for 09:00 day 2.
 
@@ -317,7 +317,8 @@ TRIGGER: init-arrow, fires at clock = 20:00 day 1.
      if leaving ∧ queueing for a show: remove from show queue (no penalty); advance_itinerary_or_exit(E)
      if staying: stayers.append(E)
 3. kpi.day1_snapshot ← freeze(kpi)
-4. schedule day-2 bootstrap: ArrivalCouple@10:00, ArrivalSingle@09:00, ShowStart@Main/Side@09:00, EndOfFestival@20:00 d2
+4. schedule day-2 bootstrap: ArrivalCouple@10:00, ArrivalSingle@09:00, ShowStart@Main/Side@09:00
+   (EndOfFestival is seeded at init, NOT scheduled here — both day-boundary events are init/zigzag events, so EndOfDay1 must not also schedule EndOfFestival or it would double-schedule. FriendsGroupArrival is day-1-only, so it is not re-bootstrapped.)
 5. for E in stayers: schedule Day2Resume(E) at 09:00 day 2
 DRAIN: in-progress activities finish naturally; their end handlers read overnight_decision → EndOfStay (leave) or next activity (stay).
 NOTE: lodging ₪250 is per-couple (parallels FG's per-group ₪700 bundle).
@@ -354,11 +355,23 @@ Spec-interpretation judgment calls; all defensible, graders may probe at the def
 Venv + deps; `diagrams/`; notebook skeleton; `instructions_coverage.md`; deletion-checklist note. Remaining: top-to-bottom smoke run, xlsx loads.
 
 ### M1 — Pre-work diagrams ◀ ACTIVE
-Read first: `הרצאה על תכנות אירועים.pdf`, the two event-programming labs (`תרגול 6/7`).
-- **Event diagram (23 nodes)** — all of §6, init-arrows on the 7 bootstrap nodes, zigzag on the 3 arrival generators, scheduling arrows; `AbandonQueue` drawn once with the 4-venue annotation.
-- **3 handling diagrams** — D1 AbandonQueue, D2 ShowStart@MainStage, D3 EndOfDay1 (pseudocode in §8 is their visual form).
-- Excalidraw MCP → export PNGs to `diagrams/` → embed in notebook §3.
+Read first: `הרצאה על תכנות אירועים.pdf`, the two event-programming labs (`תרגול 6/7`), and the **example solution's** event + handling diagrams (cell 11) for the accepted layout/abstraction level.
+
+**Event-diagram conventions (lecturer's notation — the slides are terse, so these are the locked rules):**
+- **Nodes:** circles only, one per event type, event name inside (no state-changes drawn in the node).
+- **Exactly two arrow types, nothing else:**
+  - **Zigzag arrow = initialization arrow.** Enters a node from outside; used *only* for events whose first instance must be seeded into the FEL at t=0 for the sim to run. It is **not** a generic "stochastic" marker — a deterministic init event (e.g. `EndOfDay1`) still gets it; a stochastic mid-run schedule does **not**.
+  - **Solid arrow = scheduling arrow.** `A → B` means "when A fires it *may* sample a time and schedule B into the FEL." A self-loop (A schedules the next A) is a solid arrow.
+  - **No condition/guard labels and no time-delay labels on arrows** — conditions and delays live in the handler logic, not on the graph.
+- **Init (zigzag) events (7):** the 3 arrivals, the 2 `ShowStart`s, `EndOfDay1`, `EndOfFestival`. EndOfFestival is init-seeded, *not* scheduled by EndOfDay1 (§8 D3).
+- **Layout:** high-degree hubs (`AbandonQueue`; the activity-completion cluster; `EndOfStay`) toward the center; arrival/entry sources on the left, day-boundary events on the right, departure bottom-left — mirrors the example. Arrows **bound** to nodes (drag a node, its arrows follow); never route an arrow through a node body.
+
+- **Event diagram (23 nodes)** — all of §6 at the example's abstraction level: inter-activity movement is shown as the central venue cluster (bidirectional arrows around the `AbandonQueue` hub), *not* every (source,target) pair enumerated — the detailed per-event transitions live in the handling diagrams.
+- **3 handling diagrams** — D1 AbandonQueue, D2 ShowStart@MainStage, D3 EndOfDay1 (flowcharts: rounded-rect actions + decision diamonds, RTL Hebrew; pseudocode in §8 is their visual form).
+- **Workflow:** build in Excalidraw MCP → produce a share URL (PNGs downloaded manually into `diagrams/`) → base64-embed in notebook §3.
 - **Verify:** every spec transition/condition/state-update for each diagrammed event appears; cross-check §7 I/O matrix + §9 decisions.
+
+**Build state (2026-05-29):** event diagram **v1** built & exported (Excalidraw); layout + B&W conventions approved. **Arrows have known errors** (missing / reversed / spurious) — root cause: §6/§8 specify edges in prose, not as an explicit list. **Next (v2.0):** (1) validate the node set vs the spec, (2) author a **complete directed-edge table** here in §6/§8 (source→target, type ∈ schedule/init/self/mutual), (3) regenerate via `diagrams/build/` (pipeline: `gen_excali_event.py` → `event_layout_mock.py` check → `to_native_min.py` → `export_to_excalidraw`). Handling diagrams D1/D2/D3 not yet built.
 
 ### M2 — Distribution fitting ✅ (verify this session)
 - `FriendsGroup_arrival_intervals` → **Gamma** (α̂≈1.239, β̂≈1.106). Exp rejected (std/mean=0.87, skew=1.29, mode>0). KS D=0.081<0.136; Chi²(k=12) p=0.17.
