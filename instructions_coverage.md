@@ -20,7 +20,7 @@ When you (Yonatan / Etan) pick up this notebook, please:
 
 ## M0 — Setup [USER]
 
-- [x] Install Python deps (`pandas numpy scipy matplotlib openpyxl jupyter`) — local `.venv` at project root.
+- [x] Install Python deps (`pandas numpy scipy matplotlib openpyxl jupyter`) — venv at `~/venvs/Simulation_Project/` (never inside the iCloud-synced project dir).
 - [x] Create `diagrams/` folder.
 - [x] Create `Queuechella_Simulation.ipynb` with full 20-section skeleton.
 - [x] Create this file (`instructions_coverage.md`).
@@ -111,7 +111,7 @@ When you (Yonatan / Etan) pick up this notebook, please:
 
 **4. PhotoStation**
 - [ ] **[USER M4]** 3 stations, shared queue.
-- [ ] **[USER M3]** Photo duration: piecewise PDF (identical to example) — composition method.
+- [ ] **[USER M3]** Photo duration: piecewise PDF (identical to example) — **piecewise inverse-transform** (one *u*, global piecewise CDF).
 - [ ] **[USER M4]** With p=0.7, satisfied → satisfaction +2, buy print 30 NIS.
 - [ ] **[USER M4]** Else with p=0.5, satisfaction −0.5.
 
@@ -158,8 +158,8 @@ When you (Yonatan / Etan) pick up this notebook, please:
 
 ## Spec §"חלופות" — Alternatives (budget 1,000,000 NIS)
 
-- [ ] **[PARTNERS]** Choose ≥2 combinations within budget. Justify based on current state.
-- [ ] **[PARTNERS]** Compute required run count; compare alternatives↔baseline; overall confidence 0.9; relative precision 0.1.
+- [ ] **[PARTNERS]** Choose ≥2 combinations within budget, **using most of the ₪1M** (spec: *"המטרה היא להשתמש ברובו"*). Justify based on current state.
+- [ ] **[PARTNERS]** Compute required **run count** (terminating: N independent replications of the full 2-day run, **no warmup deletion**); compare alternatives↔baseline with a **paired t-test** (CRN); overall confidence 0.9 (**Bonferroni-split** across metric×comparison tests); relative precision 0.1.
 - [ ] **[PARTNERS]** Final recommendations with statistical + logical justification.
 
 Alternative roster (handled by partners; CONFIG cell at top of notebook documents which CONFIG fields each one flips):
