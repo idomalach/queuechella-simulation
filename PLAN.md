@@ -99,7 +99,7 @@ Final cleanup: regex-find every `INTERNAL — DELETE BEFORE SUBMISSION` and dele
 | ChargingStation | 150 | per-member, parallel | battery on arrival `N(40,15)`; charge time `f(t)` with α=100/(100−battery). |
 | MerchTent | 7 | per-member, parallel | service `U(2,6)`; per-member item rolls. |
 | BodyArt | 2 artists | per-member, parallel | glitter/neon/henna; artist breaks 15 min after every 10 drawings. |
-| FoodCourt (Pizza/Burger/Asian) | 1 register each | per-member (per food-unit) | 13:00–15:00 decision window, once/day, **no abandonment**, parallel kitchen, pizza consolidation — see §5.5. |
+| FoodCourt (Pizza/Burger/Asian) | 1 register each | per-member (per food-unit) | 13:00–15:00 decision window, **one stop per entity/day**, **no abandonment**, parallel kitchen, pizza consolidation — see §5.5. |
 
 **Abandonment applies at exactly 4 venues:** PhotoStation, ChargingStation, MerchTent, BodyArt. **Not** shows, Entry, or FoodCourt (professor-confirmed). Tolerances/penalties: FriendsGroup 15 min/−2 · Couple 20 min/−1.5 · Single 20 min/−1.
 
@@ -124,7 +124,7 @@ Movement and queue position are **per-entity**; some service venues run **per-me
 
 ### 5.5 Food court — detailed model
 
-A guest becomes eligible the moment their **entity finishes an activity during 13:00–15:00** (synchronized — the entity finishes together), once per day (`food_eaten_today`). Then, **per member independently**: roll **hungry (70%)**; if hungry, pick a food type — **burger 3/8, pizza 1/4, asian 3/8**.
+**One food stop per entity per day.** An entity becomes eligible the first time it **finishes an activity during 13:00–15:00** with its entity-level gate `food_done_today` still False. At that moment the gate is **set to True immediately** (so it cannot re-fire, even between the food-court sub-steps), and the entity makes its single food stop: **per member independently**, roll **hungry (70%)**; if hungry, pick a food type — **burger 3/8, pizza 1/4, asian 3/8**. After the stop the entity never returns to the food court that day — **even members who declined get no second chance**, and "just finished eating" can't loop back into another food visit. If no member is hungry, the stop still counts as made (the gate stays set). The gate **resets at day 2** for overnight stayers (via `Day2Resume`).
 
 Eating is unconstrained (picnic tables / grass / walking) — only the **single register per restaurant** is a queue. Prep is a **parallel-kitchen delay** (the spec gives no cook capacity, only the register). Register service `N(5,1.5)` covers **order + payment** (no separate payment event). Each non-pizza order draws its own register / prep / eating samples.
 
@@ -206,7 +206,7 @@ Built by passing each candidate event through two tests — **time-advance** (do
 |---|---|---|---|
 | 20 | `EarlyExitCheck` | per entity entering MainStage, at `entry+15` | if entity still in `attendees[-10:]`, **Bernoulli(0.5)** → leave, free `entity.size` spots, roll-admit. **Spec-mandated 0.5** (*"…יעזבו את ההופעה 15 דקות לאחר שנכנסו ויפנו למתחם בהסתברות 0.5"*). |
 | 21 | `BreakEnd@BodyArt` | `EndService@BodyArt` when count %10==0 | artist available; dispatch next. |
-| 22 | `Day2Resume` | `EndOfDay1` per overnight stayer, at 09:00 day 2 | re-evaluate next activity (in case stuck in a stale show queue). |
+| 22 | `Day2Resume` | `EndOfDay1` per overnight stayer, at 09:00 day 2 | reset `food_done_today` (new food stop allowed); re-evaluate next activity (in case stuck in a stale show queue). |
 
 ### Group E — Departure, 1
 **23. `EndOfStay`** (per entity) — scheduled (usually at `now`) when a visit ends: itinerary exhausted (FG/Single), `overnight_decision == "leave"` at the moment the current activity completes, or `EndOfFestival` for day-2 stragglers. Logs every member's final satisfaction into `kpi.final_satisfactions`, marks the entity departed, frees any held resources.
@@ -227,9 +227,9 @@ A — hard end at fixed time (`EndOfDay1`, `EndOfFestival`: init-arrows). B — 
 
 **System:** `clock` · `day` (1/2) · `fel` (min-heap) · `arrival_streams_active[stream]` · `shows_scheduling_active[stage]`.
 
-**Per entity:** `id` · `type` · `size` · `members` · `arrival_time` · `bought_lodging` (FG) · `itinerary_remaining` (FG: `shows_remaining`+`stations_remaining` by phase; Single: ordered list; Couple: `next_step`) · `itinerary_phase` (FG) · `current_activity` · `current_position` ∈ {queueing, in_service, in_show, eating, transit, departed} · `queue_join_time` · `abandon_event` (ref, for commit-on-first cancel) · `overnight_decision`.
+**Per entity:** `id` · `type` · `size` · `members` · `arrival_time` · `bought_lodging` (FG) · `itinerary_remaining` (FG: `shows_remaining`+`stations_remaining` by phase; Single: ordered list; Couple: `next_step`) · `itinerary_phase` (FG) · `current_activity` · `current_position` ∈ {queueing, in_service, in_show, eating, transit, departed} · `queue_join_time` · `abandon_event` (ref, for commit-on-first cancel) · `overnight_decision` · **`food_done_today`** (entity-level once-per-day food gate; reset at day 2).
 
-**Per member (Customer):** `id` · `satisfaction` (gates couple overnight; feeds final-satisfaction KPI) · `in_service_at` · `service_end_time` · `food_eaten_today` · `lunch_decided` · `done_awaiting_regroup` · `wants_food` · `food_choice`.
+**Per member (Customer):** `id` · `satisfaction` (gates couple overnight; feeds final-satisfaction KPI) · `in_service_at` · `service_end_time` · `done_awaiting_regroup` · `wants_food` · `food_choice` (set during the entity's single food stop).
 
 **Per resource:** `queue` (FIFO of entities; length drives shortest-queue) · `servers` (slots: `.busy`, `.member`) · `in_service_entities`.
 
@@ -340,7 +340,7 @@ Spec-interpretation judgment calls; all defensible, graders may probe at the def
 9. **Merch per-member item rolls** (0.8/0.4/0.9/0.3). A 5-person group can buy 5 shirts.
 10. **PhotoStation per-entity:** one photo, one roll. Satisfied (0.7) → every member +2, +₪30 once; else (0.3)×(0.5) → every member −0.5. (Spec *"היישות מרוצה"*.)
 11. **Entry: no abandonment**; 5 booths, scan+security per member; auto-entry alt zeros the scan.
-12. **Food court (§5.5):** no abandonment, once/day; decision synchronized at entity level in 13:00–15:00, 70% per guest; members may split across restaurants; parallel kitchen; **pizza consolidation** (individual = 1 person; P≥2 → `ceil(P/3)` family pizzas, one queuer + one sample-set each, covering up to 3); regroup at `max(EndEating)`.
+12. **Food court (§5.5):** no abandonment; **one food stop per entity per day** — entity-level gate `food_done_today` set the moment the entity first finishes an activity in 13:00–15:00, so it never loops back (even members who declined get no second chance, even if nobody ate). 70% hungry per member; members may split across restaurants; parallel kitchen; **pizza consolidation** (individual = 1 person; P≥2 → `ceil(P/3)` family pizzas, one queuer + one sample-set each, covering up to 3); regroup at `max(EndEating)`; gate resets day 2.
 13. **Day transitions:** `EndOfDay1` (stop streams/shows, overnight decisions, snapshot, schedule day-2 bootstrap + `Day2Resume`); `EndOfFestival` (hard end); day-2 arrival rates = day-1 for Couple/Single.
 14. **Show satisfaction:** good (0.5) `+(G−1)/2+(T−1)/19`, G∈{3,2,1}, T=integer end-hour; bad (0.5) −1. Clamp [0,10].
 15. **Just-in-time sampling:** draw each quantity at the moment of use (service start, not queue-join); inter-arrivals self-scheduled on the current arrival firing. CRN-friendly.
