@@ -1,0 +1,18 @@
+# ── OS / editor junk ──────────────────────────────────────────────
+.DS_Store
+*.swp
+.ipynb_checkpoints/
+
+# ── Python ────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# ── Personal course materials (kept locally; not project deliverables) ──
+# Lecture slides + lab notebooks are studied on-demand and are course IP,
+# not part of what we hand in. They stay on disk but out of the repo.
+הרצאות כיתה/
+מעבדות/
+סילבוס סימולציה.pdf
