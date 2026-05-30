@@ -126,7 +126,7 @@ Movement and queue position are **per-entity**; some service venues run **per-me
 
 ### 5.5 Food court — detailed model
 
-**One food stop per entity per day.** An entity becomes eligible the first time it **finishes a real itinerary activity during 13:00–15:00** with its entity-level gate `food_done_today` still False. **(D4: eating is never the first festival activity — `EndEntry` does not count; the food gate is checked at activity-completion handlers (shows / DJ / stations / abandon), not at Entry.)** At that moment the gate is **set to True immediately** (so it cannot re-fire, even between the food-court sub-steps), and the entity makes its single food stop: **per member independently**, roll **hungry (70%)**; if hungry, pick a food type — **burger 3/8, pizza 1/4, asian 3/8**. After the stop the entity never returns to the food court that day — **even members who declined get no second chance**, and "just finished eating" can't loop back into another food visit. If no member is hungry, the stop still counts as made (the gate stays set). The gate **resets at day 2** for overnight stayers (via `Day2Resume`).
+**One food stop per entity per day.** An entity becomes eligible the first time it **finishes a real itinerary activity during 13:00–15:00** with its entity-level gate `food_done_today` still False. **(D4: eating is never the first festival activity — `EndEntry` does not count; the food gate is checked at activity-completion handlers (shows / DJ / stations / abandon), not at Entry.)** At that moment the gate is **set to True immediately** (so it cannot re-fire, even between the food-court sub-steps), and the entity makes its single food stop: **per member independently**, roll **hungry (70%)**; if hungry, pick a food type — **burger 3/8, pizza 1/4, asian 3/8**. After the stop the entity never returns to the food court that day — **even members who declined get no second chance**, and "just finished eating" can't loop back into another food visit. If no member is hungry, the stop still counts as made (the gate stays set). The gate **resets at day 2** for overnight stayers (via `Day2Resume`). *(Audit A1-3: the spec keys eligibility on guests who **have** activity in 13:00–15:00; we key it on the **activity-completion boundary** — the only event-driven place to insert the decision. Practically equivalent: any non-degenerate itinerary completes ≥1 activity inside the 2-h window.)*
 
 Eating is unconstrained (picnic tables / grass / walking) — only the **single register per restaurant** is a queue. Prep is a **parallel-kitchen delay** (the spec gives no cook capacity, only the register). Register service `N(5,1.5)` covers **order + payment** (no separate payment event). Each non-pizza order draws its own register / prep / eating samples.
 
@@ -152,7 +152,7 @@ Worked: P=1 → 1 individual, 1 in line, 1 set · P=2 or 3 → 1 family, 1 in li
 
 | Trigger | Δ | Applied to |
 |---|---|---|
-| Show, good experience (w.p. 0.5) | `+(G−1)/2 + (T−1)/19`, G∈{main 3, indie 2, electronic 1}, T = integer end-hour | per-member |
+| Show, good experience (w.p. 0.5) | `+(G−1)/2 + (T−1)/19`, G∈{main 3, indie 2, electronic 1}, T = integer **hour-of-day** of show end (9–20, **not** elapsed) | per-member |
 | Show, bad experience (w.p. 0.5) | −1 (spec *"בנקודה"*) | per-member |
 | PhotoStation satisfied (w.p. 0.7) | +2 (and buys ₪30 print) | per-entity (one roll → every member) |
 | PhotoStation unsatisfied (0.3) × bad (0.5) | −0.5 | per-entity (every member) |
@@ -239,7 +239,7 @@ The full per-handler edge contract + per-entity routing matrix are the authorita
 
 ### 7.1 State
 
-**System:** `clock` · `day` (1/2) · `fel` (min-heap) · `arrival_streams_active[stream]` · `shows_scheduling_active[stage]`.
+**System:** `clock` · `day` (1/2) · `fel` (min-heap, ordered by **(time, fixed event-class priority, insertion seq)** for a deterministic tie-break — needed for CRN reproducibility and boundary semantics; the specific 20:00 `EndOfDay1`-vs-`ShowEnd` ordering is pinned by the day-boundary fix — audit A2-8/A2-1) · `arrival_streams_active[stream]` · `shows_scheduling_active[stage]`.
 
 **Per entity:** `id` · `type` · `size` · `members` · `arrival_time` · `bought_lodging` (FG) · `itinerary_remaining` (FG: `shows_remaining`+`stations_remaining` by phase; Single: ordered list; Couple: `next_step`) · `itinerary_phase` (FG) · `current_activity` · `current_position` ∈ {queueing, in_service, in_show, eating, transit, departed} · `queue_join_time` · `abandon_event` (ref, for commit-on-first cancel) · `overnight_decision` · **`food_done_today`** (entity-level once-per-day food gate; reset at day 2).
 
@@ -261,7 +261,7 @@ The full per-handler edge contract + per-entity routing matrix are the authorita
 
 | Event | Reads | Writes | Accumulates |
 |---|---|---|---|
-| `*Arrival` | clock, stream active | create entity, entry-queue join | revenue[ticket]=₪500×size; [lodging]=₪700×size (FG bundle, w.p. 0.7) |
+| `*Arrival` | clock, stream active | create entity, entry-queue join | revenue: non-lodging = ₪500×size (ticket); **lodging FG** (w.p. 0.7) = ₪700×size bundle **replacing** the ticket (NOT additive — see #8; audit A2-3) |
 | `ShowStart@*` | queue, capacity, clock | attendees, current_show, queue-pop | attendance, queue-length |
 | `EndEntry` | booth busy, entity entry-queue | free booth, route last member → first activity | wait_times[Entry] |
 | `ShowEnd@*` | attendees, genre, clock | per-member roll; attendees → next/EndOfStay; next ShowStart | attendance |
@@ -359,7 +359,7 @@ Spec-interpretation judgment calls; all defensible, graders may probe at the def
 11. **Entry: no abandonment**; 5 booths, scan+security per member; auto-entry alt zeros the scan.
 12. **Food court (§5.5):** no abandonment; **one food stop per entity per day** — entity-level gate `food_done_today` set the moment the entity first finishes an activity in 13:00–15:00, so it never loops back (even members who declined get no second chance, even if nobody ate). 70% hungry per member; members may split across restaurants; parallel kitchen; **pizza consolidation** (individual = 1 person; P≥2 → `ceil(P/3)` family pizzas, one queuer + one sample-set each, covering up to 3); regroup at `max(EndEating)`; gate resets day 2. **(audit C2-M3, DECIDED:** *"יחידים בלבד יזמינו מנה אישית"* is read as *lone person* (P=1), **not** the Single entity-type — so any entity's single pizza-eater orders a ₪40 personal portion (P≥2 → `ceil(P/3)` family trays). Rationale: the sentence governs portion *sizing*, and a 3-serving tray for one person is wasteful. A grader may read *"יחידים"* as the Single type — defend the lone-person reading.)
 13. **Day transitions:** `EndOfDay1` (stop streams/shows, overnight decisions, snapshot, schedule day-2 bootstrap + `Day2Resume`). **`EndOfFestival` is an init-seeded event (C), NOT scheduled by `EndOfDay1`** (avoids double-scheduling), and it **drains (C2)** — in-flight finishes (clock runs past 20:00), only idle/stuck entities are swept to `EndOfStay`; not a hard stop. `Day2Resume` resets `food_done_today` and resumes the stayer at a show (E4). Day-2 arrival rates = day-1 for Couple/Single.
-14. **Show satisfaction:** good (0.5) `+(G−1)/2+(T−1)/19`, G∈{3,2,1}, T=integer end-hour; bad (0.5) −1. Clamp [0,10].
+14. **Show satisfaction:** good (0.5) `+(G−1)/2+(T−1)/19`, G∈{3,2,1}, T=integer **hour-of-day** end-hour (9–20, **not** absolute/elapsed — the /19 divisor is tuned so T=20→1.0; a day-2 elapsed clock would overshoot; audit A2-7); bad (0.5) −1. Clamp [0,10].
 15. **Just-in-time sampling:** draw each quantity at the moment of use (service start, not queue-join); inter-arrivals self-scheduled on the current arrival firing. CRN-friendly. **(audit C2-M2, DECIDED:** because CRN pairs each alternative's replications with the baseline's, alternatives are compared with a **paired t-test** / paired-difference CI on the CRN-matched per-replication diffs — **not Welch**, which is invalid under CRN and discards the variance reduction. Notebook §18 to be renamed from "(Welch)"; keep Welch only as a fallback if CRN is ever dropped.)
 16. **Satisfaction clamped to [0,10]** in every mutating handler.
 17. **Mid-show walk-in (D3):** an entity routed to a running show with free capacity enters immediately (both stages); shows may also start under-cap. MainStage walk-in arms the entrant's `EarlyExitCheck`+15; SideStage has no farthest-10. Generalizes the spec's vacated-spot rule.
@@ -454,7 +454,7 @@ Read first: OOP-refresher lab (`תרגול 2`) + example cells 13-22 for style.
 
 | Alternative | NIS | CONFIG fields |
 |---|---|---|
-| Better kitchen team | 500K | `food_unsatisfied_prob=0.1`, `food_choose_prob=0.85` |
+| Better kitchen team | 500K | `food_unsatisfied_prob=0.3` (base 0.4 − 0.1; spec *"קטנה ב-0.1"* = by, not to — audit A1-1), `food_choose_prob=0.85` |
 | Expanded security (cap +30%) | 650K | `stage_capacity_main=260, _side=130, _dj=91` |
 | Mainstream investment | 300K | `merch_band_shirt_prob=0.8`, `genre_score_main=4` |
 | Photo + BodyArt expansion | 150K | `photo_servers=4`, `bodyart_artists=3` |

@@ -163,7 +163,7 @@ When you (Yonatan / Etan) pick up this notebook, please:
 - [ ] **[PARTNERS]** Final recommendations with statistical + logical justification.
 
 Alternative roster (handled by partners; CONFIG cell at top of notebook documents which CONFIG fields each one flips):
-- [ ] **[PARTNERS]** Better kitchen team — 500K NIS.
+- [ ] **[PARTNERS]** Better kitchen team — 500K NIS (bad-dish prob 0.4→**0.3** [spec "קטנה ב-0.1" = *by* 0.1]; eat-share →85%).
 - [ ] **[PARTNERS]** Expanded security (capacity +30%) — 650K NIS.
 - [ ] **[PARTNERS]** Mainstream investment — 300K NIS.
 - [ ] **[PARTNERS]** Photo + BodyArt expansion — 150K NIS.
