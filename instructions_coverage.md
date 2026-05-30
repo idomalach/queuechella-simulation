@@ -111,7 +111,7 @@ When you (Yonatan / Etan) pick up this notebook, please:
 
 **4. PhotoStation**
 - [ ] **[USER M4]** 3 stations, shared queue.
-- [ ] **[USER M3]** Photo duration: piecewise PDF (identical to example) — **piecewise inverse-transform** (one *u*, global piecewise CDF).
+- [ ] **[USER M3]** Photo duration: piecewise PDF (identical to example) — **composition** (notebook §6.3: one recycled *u* selects the segment + inverts within it via the global piecewise CDF; equivalently a piecewise inverse transform).
 - [ ] **[USER M4]** With p=0.7, satisfied → satisfaction +2, buy print 30 NIS.
 - [ ] **[USER M4]** Else with p=0.5, satisfaction −0.5.
 
@@ -163,7 +163,7 @@ When you (Yonatan / Etan) pick up this notebook, please:
 - [ ] **[PARTNERS]** Final recommendations with statistical + logical justification.
 
 Alternative roster (handled by partners; CONFIG cell at top of notebook documents which CONFIG fields each one flips):
-- [ ] **[PARTNERS]** Better kitchen team — 500K NIS (bad-dish prob 0.4→**0.3** [spec "קטנה ב-0.1" = *by* 0.1]; eat-share →85%).
+- [ ] **[PARTNERS]** Better kitchen team — 500K NIS (bad-dish prob 0.4→**0.1** [spec "קטנה ל-0.1" = drops *to* 0.1, same `ל` as eat-share "יעלה ל-85" = *to* 85%; corrected 2026-05-30, was 0.3]; eat-share →85%).
 - [ ] **[PARTNERS]** Expanded security (capacity +30%) — 650K NIS.
 - [ ] **[PARTNERS]** Mainstream investment — 300K NIS.
 - [ ] **[PARTNERS]** Photo + BodyArt expansion — 150K NIS.

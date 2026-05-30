@@ -19,11 +19,12 @@ Event-driven simulation of the two-day **Queuechella** music festival, for the S
 | `Course Project 2026B.pdf` | The authoritative assignment spec. |
 | `samples_for_simulation.xlsx` | Empirical data for distribution fitting (2 sheets). |
 | `example solution.ipynb` | Lecturer's example — structural + report-style reference. |
-| `diagrams/` | Event diagram + handling diagrams + distribution-fit plots (embedded into the notebook). |
+| `EVENT_NODE_EDGE_SPEC.md` | Detailed event node/edge reference (partially superseded by PLAN — see its top banner). |
+| `diagrams/` | Distribution-fit plots; `diagrams/event diagrams/` holds the built event diagram + D1 handling diagram. |
 
 ## Status
 - **M0** setup, **M2** distribution fitting (Gamma + Normal), **M3** sampling (`Sampler`) — done.
-- **M1** pre-work diagrams (23-node event diagram + 3 handling diagrams) — in progress.
+- **M1** pre-work diagrams — event diagram + D1 built **and embedded** in notebook §3; D2 + D3 still to build/embed.
 - **M4** OOP class skeleton — stubs in place, being fleshed out.
 - **M5** handoff package, then partners take the event-logic run loop, KPIs, alternatives, and report polish.
 

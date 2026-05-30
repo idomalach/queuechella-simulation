@@ -24,7 +24,7 @@ Narrative language **Hebrew** (mirrors the lecturer's example); code comments **
 
 ## 2. Working environment & Colab bridge
 
-- **Master notebook:** `Queuechella_Simulation.ipynb` at project root (79 cells; M0 skeleton built, M2/M3 filled, M4 stubs). Developed locally in VSCode, delivered in Colab.
+- **Master notebook:** `Queuechella_Simulation.ipynb` at project root (101 cells; M0 skeleton built, M2/M3 filled, M4 stubs, §3 diagrams being embedded). Developed locally in VSCode, delivered in Colab.
 - **Diagrams:** Excalidraw MCP tools (`mcp__claude_ai_Excalidraw__*`) — the event diagram + 3 handling diagrams. Build → `export_to_excalidraw` share URL → download PNGs manually into `diagrams/` → base64-embed into notebook §3. (The MCP renders to the UI and shares a URL; it does not write PNG files directly.) **Node/edge spec:** `EVENT_NODE_EDGE_SPEC.md` (project root) — authoritative v2.0 node+edge spec & decision log; the full per-handler edge contract + routing matrix. *(The `diagrams/build/` build workspace was removed in the 2026-05-30 cleanup; M1 is being completed directly.)*
 - **xlsx data:** `samples_for_simulation.xlsx` at root. At submission, mirror to a **public GitHub raw URL** for Colab (no upload needed); dev uses the local relative path.
 - **Dependencies:** `pandas numpy scipy matplotlib openpyxl jupyter` (in a venv under `~/venvs/`, never inside this iCloud-synced folder). **NumPy 2.x** — `np.trapz` was removed; use `np.trapezoid` (the notebook + Colab run NumPy 2.x).
@@ -55,7 +55,7 @@ Final cleanup: regex-find every `INTERNAL — DELETE BEFORE SUBMISSION` and dele
 ### 1. מבוא · 2. תיאור המערכת והנחות (+ Design Decisions Log internal div)
 ### 3. תרשים אירועים ותרשימי טיפול (23-node event diagram + 3 handling diagrams)
 ### 4. בחירת מדדים (KPIs) · 5. התאמת התפלגות [M2 done] · 6. אלגוריתמי דגימה [M3]
-[code]  RNGStreams (hoisted — before Sampler)  ·  [code] Sampler  ·  6.8 DJ A/R validation
+[code]  RNGStreams (hoisted — before Sampler)  ·  [code] Sampler  ·  6.7 DJ A/R validation
 ### 7. מחלקת לקוח · 8. מחלקות אורחים · 9. מחלקות מתקנים · 10. תור (QueueServer) · 11. מעקב מדדים (KPITracker)  [M4]
 ### 12. RNGStreams — **orphan header** (class hoisted to §6; delete in cleanup — audit C1-n4)
 ### 13. מחלקת אירועים (Event base) [PARTNERS extend → 23 subclasses]
@@ -393,12 +393,12 @@ Read first: `הרצאה על תכנות אירועים.pdf`, the two event-progr
 - **Workflow:** build in Excalidraw MCP → produce a share URL (PNGs downloaded manually into `diagrams/`) → base64-embed in notebook §3.
 - **Verify:** every spec transition/condition/state-update for each diagrammed event appears; cross-check §7 I/O matrix + §9 decisions.
 
-**Build state (2026-05-30):** **M1 is being completed directly by the user.** The `diagrams/build/` workspace (event-diagram pipeline + the in-progress D1/D2/D3 drafts + M1 working docs) was **removed in cleanup**; the authoritative node/edge spec was preserved at `EVENT_NODE_EDGE_SPEC.md` (project root), and `diagrams/` now holds only the M2 plots. All model decisions for the event diagram + handling diagrams live in §6/§8/§9:
+**Build state (2026-05-30):** **M1 is being completed directly by the user.** The `diagrams/build/` workspace (event-diagram pipeline + M1 working docs) was **removed in cleanup**; the authoritative node/edge spec was preserved at `EVENT_NODE_EDGE_SPEC.md` (project root). `diagrams/` holds the M2 plots; `diagrams/event diagrams/` now holds the **built event diagram** (`eventdiagram.png/.svg/.excalidraw`) and the **built D1 handling diagram** (`D1.png/.svg/.excalidraw` + `D1_explanations.txt`). All model decisions for the event diagram + handling diagrams live in §6/§8/§9:
 - **D1 (AbandonQueue):** routes via the **2-step drain-aware `advance_itinerary_or_exit`** (B2) — Step 1 next-performable-activity? → Step 2 park (staying) / EndOfStay (leaving); per-member penalty, commit-on-first.
 - **D2 (ShowStart@MainStage):** farthest-10 early-exit is **FG-exempt** (A1-2), entry-time `+15` anchor (A2-4 quote verified), fill-to-max head→tail.
 - **D3 (EndOfDay1):** day-boundary fixes — re-enable day-2 flags (A2-2), sole re-seeder (A2-5), park stayers past close (A2-1), restart-fresh day 2 (A2-6); per-person couple lodging `+250×size` (C2-M4).
 
-**Remaining:** build the event diagram + 3 handling flowcharts → embed all 4 as base64 in notebook §3 → mark M1 done.
+**Remaining:** event diagram ✅ built **& embedded** (notebook §3א); D1 (AbandonQueue) ✅ built **& embedded** (§3ב); §3ג/§3ד scaffolded for **D2 (ShowStart@MainStage) + D3 (EndOfDay1)** — confirm both are built and base64-embedded, then mark M1 done. *(Notebook grew to 101 cells in the 2026-05-30 §3/§6 build-out: §3 now has the 3א–3ד diagram subsections and §6 the 6.1–6.7 algorithm subsections.)*
 
 ### M2 — Distribution fitting ✅ verified (numbers reproduce exactly)
 - `FriendsGroup_arrival_intervals` → **Gamma** (α̂=1.239321, β̂=1.106439). Exp rejected (std/mean=0.87, skew=1.29, mode>0). KS D=0.0813<0.1358; Chi²(df=9)=12.80, p=0.172. FG A-R envelope c=1.130, accept≈88.5%.
@@ -422,14 +422,14 @@ One `Sampler` class taking an `RNGStreams` instance; math in preceding markdown;
 | Ticket scan / security | U(1.5,3) / Exp(2) | Inverse |
 | MainStage / SideStage show | Normal / U(20,30) | **Box-Muller** / Inverse |
 | **DJstage stay** | piecewise | **Acceptance-Rejection** (mandatory) |
-| Photo duration | piecewise (= example pool) | **Piecewise inverse-transform** (audit C1-n1: one *u*, global piecewise CDF — the example's `inverse_transform_PD`) |
+| Photo duration | piecewise (= example pool) | **Composition** (notebook §6.3: one recycled *u* selects the segment + inverts within it via the global piecewise CDF; numerically identical to a piecewise inverse transform — the example's `inverse_transform_PD`) |
 | Charging battery / charge time | N(40,15) / α-PDF | **Box-Muller** / Inverse (`t=40(1−U^{1/α})`) |
 | Merch / BodyArt glitter,neon,henna | U(2,6) / N(15,3),Exp(12),U(17,22) | Inverse / BM,Inv,Inv |
 | Food prep pizza/burger/asian; register; meal | U(4,6)/U(3,4)/U(3,7); N(5,1.5); U(15,35) | Inverse / **Box-Muller** / Inverse |
 | All Bernoulli decisions | Bernoulli(p) | Inverse |
 
-Coverage: Inverse ✅ (incl. Photo piecewise), Box-Muller ✅ (4 normals), A-R ✅ ×2 (DJ mandatory + FG Gamma). **Composition not used** — spec lists methods with *"או"* (or); only A-R is mandatory (satisfied by DJ). *(audit C1-n1; was mislabeled "Composition")*
-- **DJ A-R:** envelope U(20,60); PDF jumps up at 40 (sup f = 1/15 at 40⁺); c = (1/15)·40 = 8/3; accept 3/8 ≈ 0.375. **Validation §6.8:** 20,000 attempts, empirical vs 3/8 + histogram vs PDF.
+Coverage (all four spec-listed methods present): Inverse ✅, Box-Muller ✅ (4 normals), **Composition ✅ (Photo §6.3** — one recycled *u* segment-selects + inverts; the notebook §6 build-out (2026-05-30) presents it as composition, equivalent to a piecewise inverse transform**)**, A-R ✅ ×2 (DJ mandatory + FG Gamma). Spec lists the methods with *"או"* (or) and only A-R is mandatory (satisfied by DJ); presenting all four maximizes method-coverage credit. *(supersedes the earlier C1-n1 "Composition not used" call — the §6.3 derivation is genuine composition.)*
+- **DJ A-R:** envelope U(20,60); PDF jumps up at 40 (sup f = 1/15 at 40⁺); c = (1/15)·40 = 8/3; accept 3/8 ≈ 0.375. **Validation §6.7:** 20,000 attempts, empirical vs 3/8 + histogram vs PDF.
 
 ### M4 — OOP class skeleton (stubs exist; flesh out)
 Read first: OOP-refresher lab (`תרגול 2`) + example cells 13-22 for style.
@@ -446,7 +446,7 @@ Read first: OOP-refresher lab (`תרגול 2`) + example cells 13-22 for style.
 
 **PLAN_AUDIT notebook fixes — status (updated 2026-05-30; smoke run passes top-to-bottom, 0 errors):**
 - ✅ **C1-M5:** `arrival_rate_multiplier` wired into the 3 `Sampler.*_arrival_interval` methods (mean ÷ multiplier) — Advertising alternative now functional.
-- ✅ **C1-n1:** `photo_duration` docstring relabeled "Composition" → "piecewise inverse-transform".
+- ↩️ **C1-n1 (REVERSED 2026-05-30):** the notebook §6 build-out presents `photo_duration` as **Composition** (a genuine piecewise-density composition, equivalent to a piecewise inverse transform) — so it now counts as the 4th method, not a mislabel. PLAN's M3 table + Coverage line updated to match; the Sampler docstring leads with "Composition (… equivalently a piecewise inverse transform)".
 - ✅ **C1-m6:** stale "(11h)" CONFIG comment deleted (windowing assumption stays documented in the CONFIG line); *still to do: restate it in the §2 assumptions narrative once §2 is written.*
 - ✅ **C2-M1:** §15 reframed warmup-deletion → **replication-count (terminating; no warmup)**; partners fill the method (N for rel-precision 0.1, Bonferroni-split α=0.1).
 - ✅ **C2-M2:** §18 renamed Welch → **paired t-test** (paired-difference CI under CRN); partners fill.
@@ -459,7 +459,7 @@ Read first: OOP-refresher lab (`תרגול 2`) + example cells 13-22 for style.
 
 | Alternative | NIS | CONFIG fields |
 |---|---|---|
-| Better kitchen team | 500K | `food_unsatisfied_prob=0.3` (base 0.4 − 0.1; spec *"קטנה ב-0.1"* = by, not to — audit A1-1), `food_choose_prob=0.85` |
+| Better kitchen team | 500K | `food_unsatisfied_prob=0.1` (spec *"קטנה ל-0.1"* = drops *to* 0.1 — the `ל` matches the eat-share *"יעלה ל-85"* = *to* 85%; **corrected 2026-05-30, was 0.3**), `food_choose_prob=0.85` |
 | Expanded security (cap +30%) | 650K | `stage_capacity_main=260, _side=130, _dj=91` |
 | Mainstream investment | 300K | `merch_band_shirt_prob=0.8`, `genre_score_main=4` |
 | Photo + BodyArt expansion | 150K | `photo_servers=4`, `bodyart_artists=3` |
@@ -473,7 +473,7 @@ Partners pick **≥2 combinations** of alternatives, each ≤ ₪1,000,000 and *
 
 ## 12. Files, references, verification, submission
 
-**Files:** `Queuechella_Simulation.ipynb` (deliverable) · `PLAN.md` (this) · `instructions_coverage.md` (spec checklist + handoff) · `Course Project 2026B.pdf` (spec, read-only) · `samples_for_simulation.xlsx` (M2 data) · `example solution.ipynb` (structural + report reference) · `diagrams/` (M2 plots) · `EVENT_NODE_EDGE_SPEC.md` (project root — detailed node+edge reference).
+**Files:** `Queuechella_Simulation.ipynb` (deliverable) · `PLAN.md` (this) · `instructions_coverage.md` (spec checklist + handoff) · `Course Project 2026B.pdf` (spec, read-only) · `samples_for_simulation.xlsx` (M2 data) · `example solution.ipynb` (structural + report reference) · `diagrams/` (M2 plots + `event diagrams/`: built event diagram + D1) · `EVENT_NODE_EDGE_SPEC.md` (project root — detailed node+edge reference, **partially superseded by PLAN — see its top banner**).
 
 **Reused from example:** inverse-transform composition for the piecewise PDF (cell 8) → PhotoStation (identical PDFs); `empirical_cdf`/`ks_test` helpers (cell 5); RTL Hebrew div styling; class-category structure. (The example's Exponential MLE is *not* the FG fit — kept only in an internal div as the tested-and-rejected hypothesis.)
 
@@ -507,8 +507,8 @@ Two independent red-team audits were run and fully triaged; **every accepted fix
 
 **Verified clean — graders may probe these, and they check out:**
 - **M2/M3 numerics reproduce exactly:** Gamma (α̂=1.239321, β̂=1.106439), Normal (μ̂=45.902765, σ̂=8.927433), KS+Chi² pass; every M3 sampler matches the §10/M3 table; DJ A-R acceptance ≈3/8; notebook runs top-to-bottom, 0 errors. **Sampler wiring correct:** each sampler reads the right CONFIG key + one named stream; `arrival_rate_multiplier` divided into all three arrival means; positive-truncation on exactly the three Normal *durations* (main show, glitter, food register), not `charging_battery` (clamped [0,99], #21).
-- **All spec numbers correct** — distributions, probabilities, prices, capacities, windows, tolerances/penalties, the show-score formula, the 7 alternatives (params + costs). Hebrew preposition/clause traps confirmed: Asian `U(3,7)`; kitchen bad-dish drops *by* 0.1 ⇒ **0.3** (A1-1); farthest-10 `לאחר שנכנסו למתחם` + `בהסתברות 0.5`; bad-show `−1` = `בנקודה`; couple 60/hr & single 500/day are count-per-period.
-- **Structure consistent** — per-entity vs per-member granularity (§5.4) matches the spec at every venue; satisfaction triggers complete & exclusive (Photo has a penalty, BodyArt correctly none); revenue sources complete; fill-to-max head→tail reproduces the spec's 99-in-a-100-cap example (shows count *people*); the 23-node catalog reconciles (7+11+1+3+1) and matches `EVENT_NODE_EDGE_SPEC.md`; abandonment at exactly the 4 service venues; 6/7 alternative CONFIG mappings correct (the 7th, kitchen, fixed by A1-1).
+- **All spec numbers correct** — distributions, probabilities, prices, capacities, windows, tolerances/penalties, the show-score formula, the 7 alternatives (params + costs). Hebrew preposition/clause traps confirmed: Asian `U(3,7)`; kitchen bad-dish drops *to* 0.1 ⇒ **0.1** (spec *"קטנה ל-0.1"*, same `ל` = *to* as eat-share *"יעלה ל-85"* ⇒ *to* 85%; **corrected 2026-05-30 — the earlier A1-1 "by 0.1 ⇒ 0.3" misread the preposition as `ב`**); farthest-10 `לאחר שנכנסו למתחם` + `בהסתברות 0.5`; bad-show `−1` = `בנקודה`; couple 60/hr & single 500/day are count-per-period.
+- **Structure consistent** — per-entity vs per-member granularity (§5.4) matches the spec at every venue; satisfaction triggers complete & exclusive (Photo has a penalty, BodyArt correctly none); revenue sources complete; fill-to-max head→tail reproduces the spec's 99-in-a-100-cap example (shows count *people*); the 23-node catalog reconciles (7+11+1+3+1) and matches `EVENT_NODE_EDGE_SPEC.md`; abandonment at exactly the 4 service venues; all 7 alternative CONFIG mappings correct (kitchen `food_unsatisfied_prob=0.1` per the *"קטנה ל-0.1"* correction above).
 
 **Rejected finding (kept for defense):** PLAN_AUDIT_2 **A2-4** claimed the farthest-10 fires "15 min *after the show*"; the PDF (p.3) actually reads `…יעזבו את ההופעה 15 דקות לאחר שנכנסו למתחם…` ("after they *entered the area*") — so PLAN's per-entrant `entry+15` anchor is correct (§9 #4). Verified against the PDF directly.
 
@@ -517,5 +517,5 @@ Two independent red-team audits were run and fully triaged; **every accepted fix
 **Open / deferred (gated on future work, not blocking):**
 - Renumber the notebook §-headers (orphan `## 12. RNGStreams`) — at the final cleanup pass.
 - Per-person entry/lodging revenue **in code** — lands when the run-loop/handler code is written (rule locked in §5.7/§7.3/§8/§9).
-- Drop the dead `lodging_couple` RNG stream (couple lodging is a deterministic `mean>7` test) — minor notebook cleanup.
+- ✅ **Dropped the dead `lodging_couple` RNG stream** (couple lodging is a deterministic `mean>7` test) — removed from `RNGStreams.STREAM_NAMES` 2026-05-30; it sat *after* `dj_stay` in the tuple, so no validated M2/M3 number changed (DJ A-R seed unaffected).
 - Restate the Single "500/day over the 7-h window" assumption in the notebook §2 narrative — when §2 is written.
