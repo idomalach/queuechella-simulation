@@ -257,11 +257,14 @@ Asian `U(3,7)`, food prefs). Dispositions:
 - **C2-M2** [CONFIRMED w/ user — paired-t] — PLAN §9 #15 now states alternatives are compared via a paired
   t-test under CRN (Welch invalid under CRN); §4 + §10 M5 + coverage flag the §18 rename.
 
-**DEFERRED to the notebook (post-M1, shared-tree — listed in PLAN §10 M5):** C1-M5 (wire
-`arrival_rate_multiplier`), C2-M1 (§15 reframe), C2-M2 (§18 rename), C1-n4 (delete orphan §12 header),
-C1-m6 (§2 windowing assumption + delete stale CONFIG comment), C1-n1 (docstring relabel), C2-M4 (per-person
-revenue in run-loop code). **Not touched now** because the active M1 session has the notebook queued for the
-diagram base64 embeds — editing it concurrently would clobber that work. Apply after M1's diagrams land.
+**NOTEBOOK FIXES — APPLIED 2026-05-30** (M1 confirmed to write only to `diagrams/`, so the notebook was
+free; smoke run passes top-to-bottom, 0 errors): ✅ C1-M5 (`arrival_rate_multiplier` wired into the 3 arrival
+samplers), ✅ C1-n1 (photo docstring → piecewise inverse-transform), ✅ C1-m6 (stale "(11h)" CONFIG comment
+deleted), ✅ C2-M1 (§15 warmup → replication-count / terminating), ✅ C2-M2 (§18 Welch → paired t-test).
+**Still deferred (NOT M1-related):** ⏸ C1-n4 (orphan §12 header — batched into the final renumber pass to
+avoid churning §-numbers + PLAN cross-refs mid-development), ⏸ C2-M4 (per-person revenue — lands when the
+run-loop code exists), and C1-m6's §2-narrative restatement (when the §2 assumptions section is written).
+**Net: every currently-actionable audit item is resolved; the 2 remaining are gated on future work, not M1.**
 
 **NO ACTION (keep as defense notes):** C1-n3 (battery clamp piles ~0.38% mass at 0 — deliberate, documented
 in §9 #21), C1-n5 (DJ "70 at every moment" modeled as capacity 70 — defensible interpretation).

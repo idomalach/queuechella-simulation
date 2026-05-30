@@ -439,14 +439,14 @@ Read first: OOP-refresher lab (`תרגול 2`) + example cells 13-22 for style.
 ### M5 — Handoff
 §2 Design Decisions Log (internal div) · CONFIG→alternatives docstring · partner roadmap (event hooks, KPI hooks, Sampler index, RNG names, GenAI log) · deletion-pass dry-run · full top-to-bottom run.
 
-**Deferred notebook scaffold edits (post-M1, shared-tree) — from PLAN_AUDIT triage:**
-- **C2-M1:** reframe §15 from warmup-deletion to a **terminating replication-count** (N runs of the full 2-day sim, **no warmup**; N for γ=0.1 with Bonferroni-split α=0.1). Add the missing *"חישוב מספר הרצות"* section.
-- **C2-M2:** rename §18 from Welch to a **paired t-test** / paired-difference CI under CRN.
-- **C1-M5:** wire `arrival_rate_multiplier` into the 3 `Sampler.*_arrival_interval` methods (mean ÷ multiplier) — currently dead config, so the Advertising alternative is a no-op. Re-run the smoke cell.
-- **C1-n4:** delete the orphan `## 12. RNGStreams` header (class hoisted to §6).
-- **C1-m6:** state the Single "500/day over the 7-h window" assumption in notebook §2; delete the stale "(11h)" CONFIG comment.
-- **C1-n1:** relabel the `photo_duration` docstring "Composition" → "piecewise inverse-transform".
-- **C2-M4:** make entry/lodging revenue **per-person** in the run-loop/handler code (×`entity.size`); Photo print stays per-entity.
+**PLAN_AUDIT notebook fixes — status (updated 2026-05-30; smoke run passes top-to-bottom, 0 errors):**
+- ✅ **C1-M5:** `arrival_rate_multiplier` wired into the 3 `Sampler.*_arrival_interval` methods (mean ÷ multiplier) — Advertising alternative now functional.
+- ✅ **C1-n1:** `photo_duration` docstring relabeled "Composition" → "piecewise inverse-transform".
+- ✅ **C1-m6:** stale "(11h)" CONFIG comment deleted (windowing assumption stays documented in the CONFIG line); *still to do: restate it in the §2 assumptions narrative once §2 is written.*
+- ✅ **C2-M1:** §15 reframed warmup-deletion → **replication-count (terminating; no warmup)**; partners fill the method (N for rel-precision 0.1, Bonferroni-split α=0.1).
+- ✅ **C2-M2:** §18 renamed Welch → **paired t-test** (paired-difference CI under CRN); partners fill.
+- ⏸ **C1-n4:** orphan `## 12. RNGStreams` header — **deferred to the final renumber pass** (deleting now would churn §13–20 numbering + every PLAN `§N` cross-ref while partners work in those sections).
+- ⏸ **C2-M4:** entry/lodging revenue **per-person** (×`entity.size`; Photo stays per-entity) — **lands when the run-loop/handler code is written** (currently partner stubs; rule locked in §5.7/§7.3/§8/§9).
 
 ---
 
