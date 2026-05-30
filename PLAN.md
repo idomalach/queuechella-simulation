@@ -33,7 +33,7 @@ Narrative language **Hebrew** (mirrors the lecturer's example); code comments **
 
 ## 3. Documentation conventions
 
-**Tier 1 — assignment-required (final deliverable):** Hebrew markdown in `<div dir="rtl" style="text-align: right; font-size: 16px; line-height: 1.8;">`; LaTeX in `$$...$$`. Wrap `##`/`###` headers in their own RTL div (Colab strips CSS injection + inline styles on `<h2>`). Inside RTL divs use `<br>`-separated raw HTML with manual numbering, **not** markdown lists.
+**Tier 1 — assignment-required (final deliverable):** Hebrew markdown in `<div dir="rtl" style="text-align: right; font-size: 16px; line-height: 1.8;">`; LaTeX in `$$...$$`. Wrap `##`/`###` headers in their own RTL div (Colab strips CSS injection + inline styles on `<h2>`). Inside RTL divs, **put a blank line right after the opening `<div …>`** so the markdown engine renders the contents — then write normal blank-line-separated paragraphs (**never `<br>`**; it reads as machine-generated) and use `**bold**`, `---` rules, `#`/`###` headers, and `- ` bullets freely (all render — matches the lecturer's example). **Typography (avoids generated tells):** a plain hyphen `-`, never `—`/`–`; in Hebrew prose the gershayim `״` (U+05F4), never the ASCII `"` (ASCII `"` only inside HTML attributes / code); and **no semicolons (`;`)** in Hebrew prose — use a period or comma (the `;` stays only inside HTML/CSS/code).
 
 **Tier 2 — partner-internal (stripped before submission):** a yellow div with a single regex marker:
 
