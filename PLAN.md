@@ -498,3 +498,24 @@ The reusable 5-step method behind §5–§8, kept for the defense and for partne
 5. **Specify handler logic** (per §8) — for each event: state read, state written, events scheduled (with delays), accumulators touched, edge cases.
 
 **Two principles:** *Does it advance time, or just gate a decision happening now?* (advance → node; gate → guard in a handler). *One node per distinct moment in time, not per outcome* (two effects at the same instant = one handler; separated by elapsed time = two events).
+
+---
+
+## Appendix B — Audit & verification log
+
+Two independent red-team audits were run and fully triaged; **every accepted fix is folded into the body above.** The `audit AX-Y` / `Cx-My` / `FLAG n` / `B2` provenance tags throughout PLAN reference these reports, whose full text lives in **git history** (the removed `PLAN_AUDIT.md` 2026-05-29 spec-fidelity/claim-vs-code + `PLAN_AUDIT_2.md` 2026-05-30 logic/consistency).
+
+**Verified clean — graders may probe these, and they check out:**
+- **M2/M3 numerics reproduce exactly:** Gamma (α̂=1.239321, β̂=1.106439), Normal (μ̂=45.902765, σ̂=8.927433), KS+Chi² pass; every M3 sampler matches the §10/M3 table; DJ A-R acceptance ≈3/8; notebook runs top-to-bottom, 0 errors. **Sampler wiring correct:** each sampler reads the right CONFIG key + one named stream; `arrival_rate_multiplier` divided into all three arrival means; positive-truncation on exactly the three Normal *durations* (main show, glitter, food register), not `charging_battery` (clamped [0,99], #21).
+- **All spec numbers correct** — distributions, probabilities, prices, capacities, windows, tolerances/penalties, the show-score formula, the 7 alternatives (params + costs). Hebrew preposition/clause traps confirmed: Asian `U(3,7)`; kitchen bad-dish drops *by* 0.1 ⇒ **0.3** (A1-1); farthest-10 `לאחר שנכנסו למתחם` + `בהסתברות 0.5`; bad-show `−1` = `בנקודה`; couple 60/hr & single 500/day are count-per-period.
+- **Structure consistent** — per-entity vs per-member granularity (§5.4) matches the spec at every venue; satisfaction triggers complete & exclusive (Photo has a penalty, BodyArt correctly none); revenue sources complete; fill-to-max head→tail reproduces the spec's 99-in-a-100-cap example (shows count *people*); the 23-node catalog reconciles (7+11+1+3+1) and matches `EVENT_NODE_EDGE_SPEC.md`; abandonment at exactly the 4 service venues; 6/7 alternative CONFIG mappings correct (the 7th, kitchen, fixed by A1-1).
+
+**Rejected finding (kept for defense):** PLAN_AUDIT_2 **A2-4** claimed the farthest-10 fires "15 min *after the show*"; the PDF (p.3) actually reads `…יעזבו את ההופעה 15 דקות לאחר שנכנסו למתחם…` ("after they *entered the area*") — so PLAN's per-entrant `entry+15` anchor is correct (§9 #4). Verified against the PDF directly.
+
+**Defensible interpretations flagged (intentional, no change):** DJ "70 בכל רגע נתון" modeled as max-capacity 70 + roll-admit (#5); DJ has no abandonment (performance reading #2) ⇒ a required DJ stop could in principle queue until the day-end drain — conscious; battery clamp piles ~0.38% of mass at 0 (#21); pizza `יחידים`=lone-person, not the Single type (#12); couple overnight uses the **mean** of the two members' satisfaction (#8).
+
+**Open / deferred (gated on future work, not blocking):**
+- Renumber the notebook §-headers (orphan `## 12. RNGStreams`) — at the final cleanup pass.
+- Per-person entry/lodging revenue **in code** — lands when the run-loop/handler code is written (rule locked in §5.7/§7.3/§8/§9).
+- Drop the dead `lodging_couple` RNG stream (couple lodging is a deterministic `mean>7` test) — minor notebook cleanup.
+- Restate the Single "500/day over the 7-h window" assumption in the notebook §2 narrative — when §2 is written.
