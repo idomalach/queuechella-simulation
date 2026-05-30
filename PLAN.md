@@ -255,7 +255,7 @@ The full per-handler edge contract + per-entity routing matrix are the authorita
 
 ### 7.2 Accumulators (KPI)
 
-`final_satisfactions: list[float]` (per member, at `EndOfStay`/`EndOfFestival`) · `wait_times[venue]`, `max_wait[venue]` (at StartService + AbandonQueue) · `queue_length_over_time[venue]` · `revenue_by_source` {ticket, lodging, merch_*, photo_print, food_*} · `total_revenue` · `abandonments[venue]` · `attendance[venue]` · `day1_snapshot`.
+`final_satisfactions: list[float]` (per member, at `EndOfStay`/`EndOfFestival`) · `wait_times[venue]`, `max_wait[venue]` (one sample per StartService + per AbandonQueue ⇒ **per-member** at the parallel-service venues Entry/Charging/Merch/BodyArt, **per-food-unit** at FoodCourt, and **per-entity** at Main/Side/DJ/Photo — M1 session 1; D2's show-wait is per-entity, as written in §8) · `queue_length_over_time[venue]` · `revenue_by_source` {ticket, lodging, merch_*, photo_print, food_*} · `total_revenue` · `abandonments[venue]` · `attendance[venue]` · `day1_snapshot`.
 
 ### 7.3 Event → I/O matrix (R = reads state, W = writes state, A = accumulates)
 
@@ -287,17 +287,19 @@ These are the M1 handling-diagram deliverables (the other 20 handlers are partne
 ```
 TRIGGER: scheduled at JoinQueue@V for now + E.wait_tolerance; CANCELLED when E's first member starts service.
          ⇒ on fire, no member of E is in service at V.
-1. if E ∉ V.queue: return                              # stale firing
+1. if E ∉ V.queue: return                              # stale firing — only cause: lazy-cancel (a member already started service ⇒ E was popped from V.queue). No "abandoned twice" path. (M1 session 2, FLAG 3)
 2. V.queue.remove(E); E.current_position ← "transit"; E.queue_join_time ← None
 3. for m in E.members: m.satisfaction ← clamp(m.satisfaction − E.wait_penalty, 0, 10)
 4. next ← select_next_activity(E)                      # FG phase-aware shortest-queue / Single fixed / Couple uniform
-5. if next is None: schedule EndOfStay(E) at now; return
+5. if next is None: advance_itinerary_or_exit(E); return   # park-vs-exit, NOT a raw EndOfStay (M1 session 2, FLAG 1)
 6. next.queue.append(E); E.current_activity ← next; E.queue_join_time ← now
    if next ∈ {Photo, Charging, Merch, BodyArt}: E.abandon_event ← schedule AbandonQueue(E, next) at now + E.wait_tolerance
    try_admit(next, now)
 ACCUMULATE: abandonments[V] += 1; queue_length_over_time[V] and [next] sampled.
 ```
 *No "members in service" branch — commit-on-first guarantees none. Penalty clamps at 0.*
+
+**`advance_itinerary_or_exit(E)` — the single park-vs-exit decision (M1 session 2, FLAG 1+2).** The only correct way to handle an exhausted itinerary (`select_next_activity` returned `None`). **Contract:** if `E` is a FriendsGroup ∧ `E.bought_lodging` ∧ `day == 1` → **park** (schedule nothing; the entity stays idle in `entities_live`, holds no resource, and `EndOfDay1` sweeps it into `stayers` → `Day2Resume` restarts it on day 2, per #7); **else** → schedule `EndOfStay(E)`. **Systemic:** every completion handler that can exhaust an itinerary — `ShowEnd@*`, `EndService@*`, `EndAtDJstage`, `EndEating`, and D1 here — must route its `None` case through this helper; a raw `schedule EndOfStay` over-exits overnight FGs (the bug FLAG 1 caught in D1; D3 already uses the helper). **Scope:** inside AbandonQueue the `None` branch is **FG-only** (a Single abandons only at Merch with shows still ahead; a Couple's open-ended alternation never exhausts mid-day — FLAG 2). No edge-spec change: "park" schedules nothing, so it adds no edge; `EndOfStay` stays folded via D5.
 
 ### D2 — ShowStart@MainStage
 ```
@@ -350,7 +352,7 @@ Spec-interpretation judgment calls; all defensible, graders may probe at the def
 4. **Farthest-10 early exit:** `EarlyExitCheck` at entry+15; if still in `attendees[-10:]`, **Bernoulli(0.5)** → leave + free spots + roll-admit. **Spec-mandated** (*"…ויפנו למתחם בהסתברות 0.5"*). **E2:** the roll-admit pulls the queue head into the running show and schedules *its own* +15 `EarlyExitCheck` (self-loop); every admission path (batch / walk-in / rolling) arms a +15 timer. **(audit C2-m7, DECIDED:** the farthest-10 rule is venue-general — it applies to FriendsGroups too; the spec's *"שהות מלאה בכל הופעה"* describes the FG itinerary order (shows before stations), not a farthest-10 exemption. Defensible; a grader may probe.)
 5. **Per-member parallel service** (Entry/Charging/Merch/BodyArt): finished members free their server immediately; the entity's next-activity decision waits for the last member (§5.4).
 6. **Itineraries:** FG phased (3 shows → 4 stations); Single fixed (Merch → 2 Main + 2 Side + 1 DJ); Couple open-ended uniform alternation, no DJ.
-7. **Exit (E4):** Singles + FG-**without**-lodging leave via `EndOfStay` when their itinerary exhausts. An FG that **bought lodging** does **not** exit at itinerary-end on day 1 — it stays overnight and **restarts a fresh itinerary on day 2** (`Day2Resume` re-inits, resumes at a show). Couples leave only at EndOfDay1/EndOfStay/EndOfFestival.
+7. **Exit (E4):** Singles + FG-**without**-lodging leave via `EndOfStay` when their itinerary exhausts. An FG that **bought lodging** does **not** exit at itinerary-end on day 1 — it stays overnight and **restarts a fresh itinerary on day 2** (`Day2Resume` re-inits, resumes at a show). Couples leave only at EndOfDay1/EndOfStay/EndOfFestival. **The park-vs-exit choice is centralized in `advance_itinerary_or_exit(E)` (§8) — every completion handler routes its itinerary-exhausted (`None`) case through it, so no handler raw-schedules `EndOfStay` and over-exits an overnight FG (M1 session 2, FLAG 1).**
 8. **Entry + lodging revenue — PER PERSON (audit C2-M4, DECIDED):** every entry ticket is ₪500 × `entity.size`. FG pre-buys lodging at arrival (Bernoulli 0.7) → ₪700 bundle × size (replaces the ₪500 ticket). Couple decides at EndOfDay1 (**avg satisfaction > 7**) → lodging ₪250 × size (= ₪500/couple). Singles never stay. **PhotoStation print stays per-entity** (one ₪30 — decision #10). *Rationale: entry is processed per-member and a festival ticket is inherently per-person; per-entity would undercount the dominant revenue source ~(avg size)× and skew the revenue KPI.*
 9. **Merch per-member item rolls** (0.8/0.4/0.9/0.3). A 5-person group can buy 5 shirts.
 10. **PhotoStation per-entity:** one photo, one roll. Satisfied (0.7) → every member +2, +₪30 once; else (0.3)×(0.5) → every member −0.5. (Spec *"היישות מרוצה"*.)
@@ -391,7 +393,7 @@ Read first: `הרצאה על תכנות אירועים.pdf`, the two event-progr
 - **Workflow:** build in Excalidraw MCP → produce a share URL (PNGs downloaded manually into `diagrams/`) → base64-embed in notebook §3.
 - **Verify:** every spec transition/condition/state-update for each diagrammed event appears; cross-check §7 I/O matrix + §9 decisions.
 
-**Build state (2026-05-29):** event diagram **v1** built & exported (layout + B&W conventions approved) but with known arrow errors. The **v2.0 node set is validated and the complete directed-edge spec is authored** — model decisions folded into §6/§9 here; the full per-handler edge contract + routing matrix live in `diagrams/build/EVENT_NODE_EDGE_SPEC.md`; build pipeline + Excalidraw-MCP gotchas in `diagrams/build/README.md`. **Next (a fresh M1 session):** (1) apply the spec §7 build-delta to `gen_excali_event.py` (STATIONS super-node box replacing the v1 ring; mutual show cycles E1; `EarlyExit` self-loop E2; `EndEntry→Merch` fix E3; honest fan-ins; `Day2Resume` incoming-only E4), re-verify `event_layout_mock.py` `VIOLATIONS=0`, regenerate native, export → URL; (2) build the 3 handling diagrams D1/D2/D3 as flowcharts; (3) embed all 4 as base64 in notebook §3. **Open build choice:** `EarlyExitCheck` has a dense walk-in fan-in (spec §4 #18) — keep it on the event graph, or relegate the walk-in routers to the D2 handling diagram if the mock is too busy (spec §5).
+**Build state (2026-05-30):** **event diagram FINAL** — built by M1 session 3 and delivered as the repo-root `Untitled-2026-05-25-0416.excalidraw` (this **is** the deliverable event diagram — to be renamed/moved into `diagrams/`, **not** a stray scratch file). v1's known arrow errors are resolved; a verification doc is at `diagrams/build/VERIFY_EVENT_DIAGRAM.md`. The **v2.0 node set is validated and the complete directed-edge spec is authored** — model decisions folded into §6/§9 here; the full per-handler edge contract + routing matrix live in `diagrams/build/EVENT_NODE_EDGE_SPEC.md`; build pipeline + Excalidraw-MCP gotchas in `diagrams/build/README.md`. **In progress (parallel M1 sessions):** the 3 handling diagrams **D1/D2/D3** (flowcharts) are still being built. **Remaining:** finish D1/D2/D3 → embed all 4 as base64 in notebook §3 → mark M1 done in §10. **D1 must** route its itinerary-exhausted (`None`) case via `advance_itinerary_or_exit` (not a raw EndOfStay — §8 D1 step 5 fix); **D3 must** show couple lodging as **per-person** (C2-M4 — `+250 ₪ לאדם`, currently rendered as `+250 ₪`). **Folded from M1 review sessions into this PLAN rev:** §7.2 wait granularity (session 1); §8 D1 over-exit fix + `advance_itinerary_or_exit` helper + FLAG 2/3 (session 2). **Open build choice:** `EarlyExitCheck` has a dense walk-in fan-in (spec §4 #18) — keep it on the event graph, or relegate the walk-in routers to the D2 handling diagram if the mock is too busy (spec §5).
 
 ### M2 — Distribution fitting ✅ verified (numbers reproduce exactly)
 - `FriendsGroup_arrival_intervals` → **Gamma** (α̂=1.239321, β̂=1.106439). Exp rejected (std/mean=0.87, skew=1.29, mode>0). KS D=0.0813<0.1358; Chi²(df=9)=12.80, p=0.172. FG A-R envelope c=1.130, accept≈88.5%.
