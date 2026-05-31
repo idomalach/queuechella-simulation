@@ -45,6 +45,8 @@ Narrative language **Hebrew** (mirrors the lecturer's example); code comments **
 
 Final cleanup: regex-find every `INTERNAL — DELETE BEFORE SUBMISSION` and delete the enclosing cell.
 
+**Code comments (English only, per assignment).** Default to writing for the grader: cross-reference a section by name ("fitted in section 5א") or explain in plain English (like `DiscreteUniform[3,6]`). Avoid internal shorthand (`M2 §5א MLE`) and the section sign `§`, both generated tells. A comment purely for partners gets the tag **`# [INTERNAL]`**, so partners can grep-and-strip them all before submission (same `INTERNAL` keyword as the Tier-2 cells).
+
 ---
 
 ## 4. Notebook section structure
