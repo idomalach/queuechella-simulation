@@ -170,7 +170,7 @@ Alternative roster (handled by partners; CONFIG cell at top of notebook document
 
 ## Cross-cutting deliverable hygiene
 
-- [ ] **[USER+PARTNERS]** GenAI usage log in §20 — every tool/use logged with date, tool, purpose, description.
+- [ ] **[USER+PARTNERS]** GenAI usage log in §19 — every tool/use logged with date, tool, purpose, description.
 - [ ] **[USER+PARTNERS]** Internal yellow divs stripped before submission (regex `INTERNAL — DELETE BEFORE SUBMISSION`).
 - [ ] **[USER]** Local xlsx path → public GitHub raw URL before Colab handoff.
 - [ ] **[USER+PARTNERS]** Final notebook runs top-to-bottom in Colab without errors.
