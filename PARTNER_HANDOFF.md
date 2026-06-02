@@ -52,6 +52,8 @@ Simulation   ── owns clock + FEL + all the above; schedule()/pop_next_event(
 2. **`Simulation.run()`** (§13). The scaffold is ready — `schedule()`, `pop_next_event()` (pops earliest, advances `self.clock`), and the `rng/sampler/activities/kpi` handles. The loop is roughly: seed the bootstrap events → `while self.fel: ev = self.pop_next_event(); ev.execute(self)` → stop at day/festival end. Routing per entity uses `entity.select_next_activity(self.activities)`.
 3. **Analysis §14–§18.** Terminating sim, **no warmup deletion**, N sized for relative precision 0.1 with Bonferroni-split α; alternatives compared with a **paired t-test under CRN** (reseed only the streams an alternative touches — see §4). Requirements: PLAN.md §5.1, §9.
 
+Also still **pre-work**: build the **D2 (MainStage ShowStart)** and **D3 (EndOfDay)** handling diagrams and embed them in §3 (placeholders are in place; the event diagram + D1 are done as references).
+
 **Tick off `instructions_coverage.md` as you complete each section.**
 
 ---

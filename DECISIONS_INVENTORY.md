@@ -4,8 +4,6 @@
 
 Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `M4_CLASSES_SESSION_BRIEF.md` (removed; folded into `PARTNER_HANDOFF.md`); `COV` = `instructions_coverage.md`; `NB cell N` = `Queuechella_Simulation.ipynb` cell N; `m4` = `m4_classes.py` (retired; classes now live in notebook §7–§13, the F-flags in `PARTNER_HANDOFF.md`).
 
-> **⚠️ The notebook's §2 "Design Decisions Log" (NB cell 7) is STALE** — a 13-item list that predates the 2026-05-30 audit. It contradicts PLAN §9 on six points (entries B7, B8, B10, B13, S1, S3 below) and omits ~9 later decisions. Treat PLAN §9 as authoritative; NB cell 7 must be rewritten before submission.
-
 ---
 
 ## Behavioral
@@ -57,7 +55,6 @@ Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `
 *Spec basis:* ambiguous — *"מדד שביעות הרצון גבוה מ-7"* but satisfaction is per-person.
 *Our choice:* `mean(member.satisfaction) > 7`.
 *Found in:* PLAN §9 #8 L356, §8 D3 L331; Appendix B L515; M4B §4 L126; m4 `Couple.decide_overnight` L462.
-*Conflict:* **NB cell 7 #8 is STALE** — *"חבר אחד עם סיפוק>7"* (one member). The old CONFIG comment "at least one member" was already corrected to "average" (PLAN L411).
 *Alternative reading:* at least one member > 7; or both members > 7.
 
 **B9. FriendsGroup overnight is a flat Bernoulli(0.7) drawn AT ARRIVAL.**
@@ -70,13 +67,12 @@ Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `
 *Spec basis:* silent — *"וימשיכו ליום הבא"* doesn't say resume vs restart.
 *Our choice:* `Day2Resume` re-inits a fresh itinerary and resumes the stayer at a show; an FG-with-lodging that finishes its day-1 itinerary does **not** exit (A2-6).
 *Found in:* PLAN §9 #7 L355, §5.2 E4 L87, §6 L211, §8 D3 L338; EDGE E4 L66 + banner A2-6.
-*Conflict:* **NB cell 7 #7 is STALE** — *"Single ו-FriendsGroup יוצאים מיד עם סיום האיטינררי"* (FG exits on itinerary-end).
 *Alternative reading:* FG exits at itinerary-end even with lodging; or resume the unfinished day-1 itinerary.
 
 **B11. Day-2 arrival rates equal day-1 rates (Couple/Single).**
 *Spec basis:* silent on day-2 intensity.
 *Our choice:* identical rates on both days.
-*Found in:* PLAN §9 #13 L361; NB cell 7 #13 L79.
+*Found in:* PLAN §9 #13 L361.
 *Alternative reading:* a different day-2 arrival rate.
 
 **B12. Lunch eligibility is keyed on the activity-COMPLETION boundary inside 13:00–15:00 (and eating is never the first activity).**
@@ -89,7 +85,6 @@ Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `
 *Spec basis:* ambiguous granularity — *"70% מכלל אורחי הפסטיבל יבחרו לאכול"* (per guest, but the entity moves as a unit elsewhere; "once" vs repeatable unstated).
 *Our choice:* an entity-level `food_done_today` gate set the moment the entity first finishes an in-window activity; even members who declined get no second chance; no loop-back; gate resets via `Day2Resume`.
 *Found in:* PLAN §5.5 L129, §9 #12 L360; M4B §5 L165.
-*Conflict:* **NB cell 7 #12 is STALE** — *"פעם אחת ביום פר-מבקר"* (once per day **per visitor**), and claims food has abandonment (see S2).
 *Alternative reading:* a per-member gate; or allow multiple food visits within the window.
 
 **B14. Hungry roll (70%) is per MEMBER independently; members may pick different restaurants.**
@@ -115,7 +110,6 @@ Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `
 *Spec basis:* *"בהסתברות 0.7 הישות מרוצה... יעלה ב-2... במידה והישות לא מרוצה, בהסתברות 0.5 יירד ב-0.5"* — singular *"הישות"*.
 *Our choice:* one roll per visit → satisfied (0.7): +2 to every member (and one ₪30 print, see R3); unsatisfied (0.3)×bad(0.5): −0.5 to every member.
 *Found in:* PLAN §9 #10 L358, §5.6 L157-158, §5.4 L115; M4B §5.
-*Conflict:* **NB cell 7 #10 is STALE** — *"גלגול פר-מבקר"* (per-visitor roll).
 *Alternative reading:* an independent photo/roll per member.
 
 **B18. Per-guest meal-satisfaction roll (including family-pizza coverees).**
@@ -265,14 +259,12 @@ Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `
 *Spec basis:* tolerances/penalties given; the timer mechanics are silent.
 *Our choice:* one timer per entity from queue-join; **cancelled the moment the first member starts service** (so no member is in service when it fires); on fire, pull all queued members, apply −penalty to each (clamp 0), route onward. No "members-in-service" branch exists.
 *Found in:* PLAN §9 #1 L349, §8 D1 L286-296; EDGE §1 (`AbandonQueue`); M4B §5.
-*Conflict:* **NB cell 7 #1 is STALE** — claims members already in service also lose the penalty *and* still receive the activity bonus, i.e. a members-in-service branch that commit-on-first eliminates.
 *Alternative reading:* per-member timers; commit only when *all* members are in service; penalty only to still-queued members.
 
 **M3. Abandonment applies at EXACTLY 4 venues (Photo, Charging, Merch, BodyArt).**
 *Spec basis:* *"מספר דקות שמוכן להמתין בעמדות (לא כולל הופעות)"* excludes shows; Entry and FoodCourt are not addressed (resolved with the professor).
 *Our choice:* abandonment at the 4 service stations only; none at shows, Entry, or FoodCourt (professor-confirmed).
 *Found in:* PLAN §9 #2 L350, §5.3 L106; M4B §5.
-*Conflict:* **NB cell 7 #12 is STALE** — *"FoodCourt: כן יש נטישה"* (food has abandonment).
 *Alternative reading:* include FoodCourt (and/or Entry) abandonment.
 
 **M4. Per-member parallel service at Entry/Charging/Merch/BodyArt.**
@@ -410,7 +402,7 @@ Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `
 
 ## Doc-vs-doc inconsistencies flagged (must reconcile before submission)
 
-1. **NB cell 7 (§2 Design Decisions Log) is stale** and contradicts PLAN §9 on six points: AbandonQueue members-in-service branch (#1 → M2), no FG farthest-10 exemption (#5 → B7), FG exits on itinerary-end (#7 → B10), couple overnight "one member" vs average (#8 → B8), Photo per-visitor vs per-entity (#10 → B17), FoodCourt "has abandonment" + "per visitor" vs no-abandonment/per-entity (#12 → M3/B13). It also lists only 13 items vs PLAN's 22 (omits terminating-sim, paired t-test, per-person revenue, pizza consolidation, per-member parallel service, mid-show walk-in, eating≠first, battery clamp, T=hour-of-day, drain semantics).
+1. **The §2 "Design Decisions Log" (the old 13-item NB cell 7) was replaced by prose narrative** (current §2 reflects the locked decisions); the stale-log warnings have been removed from this inventory.
 2. **Pizza "יחידים" reading split (B15):** PLAN reads *lone person*; the CONFIG comment (NB cell 22 L313 "Single only") and COV L148-149 still encode the rejected *Single-type* reading.
 3. **DJ A-R M value (S2):** the CONFIG comment records that PLAN.md *initially* claimed M=1/30; reconciled to 1/15 — now consistent, kept here as provenance.
 4. **EVENT_NODE_EDGE_SPEC.md** was reconciled with the 2026-05-30 audit (the MainStage early-exit model, E4 resolved) via inline `[2026-05-30]` notes; the notebook/PLAN win on any residual conflict.
