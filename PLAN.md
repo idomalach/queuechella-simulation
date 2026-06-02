@@ -1,6 +1,6 @@
 # Queuechella Simulation — Master Plan (Group 20)
 
-**Single source of truth.** Everything needed to understand, build, and defend the simulation lives here: the festival model, the event decomposition (23 events + state/accumulator tables + handler pseudocode), every locked design decision, the milestone plan, and the alternatives mapping. Read §1–§4 for orientation, §5–§8 for the model, §9 for the judgment calls, §10 for the build plan.
+**Design reference (the notebook is the source of truth).** Everything needed to understand, build, and defend the simulation lives here: the festival model, the event decomposition (23 events + state/accumulator tables + handler pseudocode), every locked design decision, the milestone plan, and the alternatives mapping. Read §1–§4 for orientation, §5–§8 for the model, §9 for the judgment calls, §10 for the build plan.
 
 **Group #20** — Ido Malach (318782208) · Yonatan Dolman (208987644) · Etan Cohen (322067448). **Submission: 2026-06-29.**
 
@@ -59,11 +59,10 @@ Final cleanup: regex-find every `INTERNAL — DELETE BEFORE SUBMISSION` and dele
 ### 4. בחירת מדדים (KPIs) · 5. התאמת התפלגות [M2 done] · 6. אלגוריתמי דגימה [M3]
 [code]  RNGStreams (hoisted — before Sampler)  ·  [code] Sampler  ·  6.7 DJ A/R validation
 ### 7. מחלקת לקוח · 8. מחלקות אורחים · 9. מחלקות מתקנים · 10. תור (QueueServer) · 11. מעקב מדדים (KPITracker)  [M4]
-### 12. RNGStreams — **orphan header** (class hoisted to §6; delete in cleanup — audit C1-n4)
-### 13. מחלקת אירועים (Event base) [PARTNERS extend → 23 subclasses]
-### 14. מחלקת הסימולציה (skeleton) [PARTNERS fill run loop]
-### 15. ניתוח חימום → **reframe to ניתוח מספר הרצות** (replication-count, terminating — C2-M1) · 16. מדדי מצב קיים · 17. בחינת חלופות · 18. השוואת חלופות (Welch) → **paired t-test** (C2-M2) · 19. סיכום והמלצות  [PARTNERS]
-### 20. דיווח GenAI
+### 12. מחלקת אירועים (Event base) [PARTNERS extend → 23 subclasses]
+### 13. מחלקת הסימולציה (skeleton) [PARTNERS fill run loop]
+### 14. חישוב מספר הרצות (replication-count, terminating) · 15. מדדי מצב קיים · 16. בחינת חלופות · 17. השוואת חלופות (paired t-test) · 18. סיכום והמלצות  [PARTNERS]
+### 19. דיווח GenAI
 ```
 
 ---
@@ -79,7 +78,7 @@ Final cleanup: regex-find every `INTERNAL — DELETE BEFORE SUBMISSION` and dele
 
 | Entity | Arrival | Window | Days | Size |
 |---|---|---|---|---|
-| **FriendsGroup** | from xlsx → **Gamma**(α≈1.24, β≈1.11), sampled via A-R | 09:00–13:00 | **Day 1 only**; stays overnight w.p. 0.7 | DiscreteUniform[3,6] |
+| **FriendsGroup** | from xlsx → **Gamma**(r≈1.24, λ≈0.90), sampled via A-R | 09:00–13:00 | **Day 1 only**; stays overnight w.p. 0.7 | DiscreteUniform[3,6] |
 | **Couple** | **Exp, 60/hour ⇒ λ=1/min, mean inter-arrival 1 min** | 10:00–16:00 | Day 1 or 2; stays iff **avg satisfaction > 7** at end of day 1 | 2 |
 | **Single** | Exp, 500/day (windowed over 09:00–16:00 ⇒ λ≈500/420 per min) | 09:00–16:00 | one day only (1 or 2) | 1 |
 
@@ -247,7 +246,7 @@ The full per-handler edge contract + per-entity routing matrix are the authorita
 
 **Per member (Customer):** `id` · `satisfaction` (gates couple overnight; feeds final-satisfaction KPI) · `in_service_at` · `service_end_time` · `done_awaiting_regroup` · `wants_food` · `food_choice` (set during the entity's single food stop).
 
-**Per resource:** `queue` (FIFO of entities; length drives shortest-queue) · `servers` (slots: `.busy`, `.member`) · `in_service_entities`.
+**Per resource:** `queue` (FIFO of entities; people waiting drives shortest-queue) · `servers` (slots: `.busy`, `.member`) · `in_service_entities`.
 
 **Per stage:** `attendees` (entry-ordered; MainStage uses `attendees[-10:]`) · `spots_used` · `current_show.{genre, end_time}` · `next_show_event`.
 
@@ -362,7 +361,7 @@ Spec-interpretation judgment calls; all defensible, graders may probe at the def
 12. **Food court (§5.5):** no abandonment; **one food stop per entity per day** — entity-level gate `food_done_today` set the moment the entity first finishes an activity in 13:00–15:00, so it never loops back (even members who declined get no second chance, even if nobody ate). 70% hungry per member; members may split across restaurants; parallel kitchen; **pizza consolidation** (individual = 1 person; P≥2 → `ceil(P/3)` family pizzas, one queuer + one sample-set each, covering up to 3); regroup at `max(EndEating)`; gate resets day 2. **(audit C2-M3, DECIDED:** *"יחידים בלבד יזמינו מנה אישית"* is read as *lone person* (P=1), **not** the Single entity-type — so any entity's single pizza-eater orders a ₪40 personal portion (P≥2 → `ceil(P/3)` family trays). Rationale: the sentence governs portion *sizing*, and a 3-serving tray for one person is wasteful. A grader may read *"יחידים"* as the Single type — defend the lone-person reading.)
 13. **Day transitions:** `EndOfDay1` (stop streams/shows, overnight decisions, snapshot, schedule day-2 bootstrap + `Day2Resume`). **EndOfDay1 must re-enable `arrival_streams_active`/`shows_scheduling_active` to True for day 2 (A2-2 — else day 2 gets one arrival/show each) and is the SOLE day-2 re-seeder (A2-5 — streams don't self-schedule across the boundary).** **`EndOfFestival` is an init-seeded event (C), NOT scheduled by `EndOfDay1`** (avoids double-scheduling), and it **drains (C2)** — in-flight finishes (clock runs past 20:00), only idle/stuck entities are swept to `EndOfStay`; not a hard stop. **Past-close completions = Step 2 of the 2-step routing helper (B2/A2-1): staying entities PARK; leavers / final-day → `EndOfStay`.** `Day2Resume` resets `food_done_today` and re-inits a fresh itinerary, resuming the stayer at a show (E4, A2-6). Day-2 arrival rates = day-1 for Couple/Single.
 14. **Show satisfaction:** good (0.5) `+(G−1)/2+(T−1)/19`, G∈{3,2,1}, T=integer **hour-of-day** end-hour (9–20, **not** absolute/elapsed — the /19 divisor is tuned so T=20→1.0; a day-2 elapsed clock would overshoot; audit A2-7); bad (0.5) −1. Clamp [0,10].
-15. **Just-in-time sampling:** draw each quantity at the moment of use (service start, not queue-join); inter-arrivals self-scheduled on the current arrival firing. CRN-friendly. **(audit C2-M2, DECIDED:** because CRN pairs each alternative's replications with the baseline's, alternatives are compared with a **paired t-test** / paired-difference CI on the CRN-matched per-replication diffs — **not Welch**, which is invalid under CRN and discards the variance reduction. Notebook §18 to be renamed from "(Welch)"; keep Welch only as a fallback if CRN is ever dropped.)
+15. **Just-in-time sampling:** draw each quantity at the moment of use (service start, not queue-join); inter-arrivals self-scheduled on the current arrival firing. CRN-friendly. **(audit C2-M2, DECIDED:** because CRN pairs each alternative's replications with the baseline's, alternatives are compared with a **paired t-test** / paired-difference CI on the CRN-matched per-replication diffs — **not Welch**, which is invalid under CRN and discards the variance reduction. Notebook §17 (השוואת חלופות) uses the paired t-test; Welch kept only as a fallback if CRN is ever dropped.)
 16. **Satisfaction clamped to [0,10]** in every mutating handler.
 17. **Mid-show walk-in (D3):** an entity routed to a running show with free capacity enters immediately (both stages); shows may also start under-cap. MainStage walk-in arms the entrant's `EarlyExitCheck`+15 (**non-FG only — A1-2**); SideStage has no farthest-10. Generalizes the spec's vacated-spot rule.
 18. **Eating ≠ first activity (D4):** the food gate is evaluated only at real activity-completion handlers, never at `EndEntry`.
@@ -413,7 +412,7 @@ One `Sampler` class taking an `RNGStreams` instance; math in preceding markdown;
 - **Couple rate fixed:** CONFIG `couple_arrival_lambda` `1.0/60.0` → **`1.0`** (60/hr, mean 1 min — verified 1.002 min); `§6` mapping row + the `couple_arrival_interval` docstring fixed; `couple_lodging_threshold` comment "at least one member" → "average".
 - **Positive-normal truncation implemented** (was *missing* — the prior plan described it as present): Box-Muller helper now rejection-resamples until x>0 for the three Normal *durations* (main show, glitter, food register; `food_register N(5,1.5)` had ~0.045% negatives, now strictly positive). `charging_battery` is **clamped to [0,99]** (decision #21), not positive-truncated.
 - **NumPy-2.x:** DJ A-R validation uses `np.trapezoid` (`np.trapz` removed in NumPy 2.x).
-- **RNGStreams hoisted:** the `RNGStreams` class is defined immediately **before** the `Sampler` in §6 (top-to-bottom run needs it first); the `## 12. RNGStreams` markdown header in the M4 region is now just leftover scaffolding.
+- **RNGStreams hoisted:** the `RNGStreams` class is defined immediately **before** the `Sampler` in §6 (top-to-bottom run needs it first); the former `## 12. RNGStreams` orphan header has been removed (notebook renumbered §13–§20 → §12–§19, 2026-06-02).
 
 | Quantity | Distribution | Algorithm |
 |---|---|---|
@@ -450,9 +449,9 @@ Read first: OOP-refresher lab (`תרגול 2`) + example cells 13-22 for style.
 - ✅ **C1-M5:** `arrival_rate_multiplier` wired into the 3 `Sampler.*_arrival_interval` methods (mean ÷ multiplier) — Advertising alternative now functional.
 - ↩️ **C1-n1 (REVERSED 2026-05-30):** the notebook §6 build-out presents `photo_duration` as **Composition** (a genuine piecewise-density composition, equivalent to a piecewise inverse transform) — so it now counts as the 4th method, not a mislabel. PLAN's M3 table + Coverage line updated to match; the Sampler docstring leads with "Composition (… equivalently a piecewise inverse transform)".
 - ✅ **C1-m6:** stale "(11h)" CONFIG comment deleted (windowing assumption stays documented in the CONFIG line); *still to do: restate it in the §2 assumptions narrative once §2 is written.*
-- ✅ **C2-M1:** §15 reframed warmup-deletion → **replication-count (terminating; no warmup)**; partners fill the method (N for rel-precision 0.1, Bonferroni-split α=0.1).
-- ✅ **C2-M2:** §18 renamed Welch → **paired t-test** (paired-difference CI under CRN); partners fill.
-- ⏸ **C1-n4:** orphan `## 12. RNGStreams` header — **deferred to the final renumber pass** (deleting now would churn §13–20 numbering + every PLAN `§N` cross-ref while partners work in those sections).
+- ✅ **C2-M1:** §14 reframed warmup-deletion → **replication-count (terminating; no warmup)**; partners fill the method (N for rel-precision 0.1, Bonferroni-split α=0.1).
+- ✅ **C2-M2:** §17 renamed Welch → **paired t-test** (paired-difference CI under CRN); partners fill.
+- ✅ **C1-n4:** orphan `## 12. RNGStreams` header removed; notebook renumbered §13–§20 → §12–§19 (2026-06-02).
 - ⏸ **C2-M4:** entry/lodging revenue **per-person** (×`entity.size`; Photo stays per-entity) — **lands when the run-loop/handler code is written** (currently partner stubs; rule locked in §5.7/§7.3/§8/§9).
 
 ---
@@ -475,7 +474,7 @@ Partners pick **≥2 combinations** of alternatives, each ≤ ₪1,000,000 and *
 
 ## 12. Files, references, verification, submission
 
-**Files:** `Queuechella_Simulation.ipynb` (deliverable) · `PLAN.md` (this) · `instructions_coverage.md` (spec checklist + handoff) · `Course Project 2026B.pdf` (spec, read-only) · `samples_for_simulation.xlsx` (M2 data) · `example solution.ipynb` (structural + report reference) · `diagrams/` (M2 plots + `event diagrams/`: built event diagram + D1) · `EVENT_NODE_EDGE_SPEC.md` (project root — detailed node+edge reference, **partially superseded by PLAN — see its top banner**).
+**Files:** `Queuechella_Simulation.ipynb` (deliverable) · `PLAN.md` (this) · `instructions_coverage.md` (spec checklist + handoff) · `Course Project 2026B.pdf` (spec, read-only) · `samples_for_simulation.xlsx` (M2 data) · `example solution.ipynb` (structural + report reference) · `diagrams/` (M2 plots + `event diagrams/`: built event diagram + D1) · `EVENT_NODE_EDGE_SPEC.md` (project root — detailed node+edge + routing-matrix reference, reconciled with the notebook).
 
 **Reused from example:** inverse-transform composition for the piecewise PDF (cell 8) → PhotoStation (identical PDFs); `empirical_cdf`/`ks_test` helpers (cell 5); RTL Hebrew div styling; class-category structure. (The example's Exponential MLE is *not* the FG fit — kept only in an internal div as the tested-and-rejected hypothesis.)
 
@@ -517,7 +516,7 @@ Two independent red-team audits were run and fully triaged; **every accepted fix
 **Defensible interpretations flagged (intentional, no change):** DJ "70 בכל רגע נתון" modeled as max-capacity 70 + roll-admit (#5); DJ has no abandonment (performance reading #2) ⇒ a required DJ stop could in principle queue until the day-end drain — conscious; battery clamp piles ~0.38% of mass at 0 (#21); pizza `יחידים`=lone-person, not the Single type (#12); couple overnight uses the **mean** of the two members' satisfaction (#8).
 
 **Open / deferred (gated on future work, not blocking):**
-- Renumber the notebook §-headers (orphan `## 12. RNGStreams`) — at the final cleanup pass.
+- ✅ Renumbered the notebook §-headers (orphan `## 12. RNGStreams` removed; §13–§20 → §12–§19) — done 2026-06-02.
 - Per-person entry/lodging revenue **in code** — lands when the run-loop/handler code is written (rule locked in §5.7/§7.3/§8/§9).
 - ✅ **Dropped the dead `lodging_couple` RNG stream** (couple lodging is a deterministic `mean>7` test) — removed from `RNGStreams.STREAM_NAMES` 2026-05-30; it sat *after* `dj_stay` in the tuple, so no validated M2/M3 number changed (DJ A-R seed unaffected).
 - Restate the Single "500/day over the 7-h window" assumption in the notebook §2 narrative — when §2 is written.

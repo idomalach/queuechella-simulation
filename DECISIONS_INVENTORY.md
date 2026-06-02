@@ -2,7 +2,7 @@
 
 **Scope.** Every judgment call we made because the spec (`Course Project 2026B.pdf`) was **silent, ambiguous, or needed an implementation interpretation.** Facts the spec states verbatim (capacities, prices, printed probabilities, named distributions, windows, costs) are **excluded** — they are listed in the boundary note at the end. Deduplicated, one entry per decision, with all citation sites. Doc-vs-doc conflicts are flagged inline and summarised at the end.
 
-Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `M4_CLASSES_SESSION_BRIEF.md`; `COV` = `instructions_coverage.md`; `NB cell N` = `Queuechella_Simulation.ipynb` cell N; `m4` = `m4_classes.py`.
+Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `M4_CLASSES_SESSION_BRIEF.md` (removed; folded into `PARTNER_HANDOFF.md`); `COV` = `instructions_coverage.md`; `NB cell N` = `Queuechella_Simulation.ipynb` cell N; `m4` = `m4_classes.py`.
 
 > **⚠️ The notebook's §2 "Design Decisions Log" (NB cell 7) is STALE** — a 13-item list that predates the 2026-05-30 audit. It contradicts PLAN §9 on six points (entries B7, B8, B10, B13, S1, S3 below) and omits ~9 later decisions. Treat PLAN §9 as authoritative; NB cell 7 must be rewritten before submission.
 
@@ -413,7 +413,7 @@ Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `
 1. **NB cell 7 (§2 Design Decisions Log) is stale** and contradicts PLAN §9 on six points: AbandonQueue members-in-service branch (#1 → M2), no FG farthest-10 exemption (#5 → B7), FG exits on itinerary-end (#7 → B10), couple overnight "one member" vs average (#8 → B8), Photo per-visitor vs per-entity (#10 → B17), FoodCourt "has abandonment" + "per visitor" vs no-abandonment/per-entity (#12 → M3/B13). It also lists only 13 items vs PLAN's 22 (omits terminating-sim, paired t-test, per-person revenue, pizza consolidation, per-member parallel service, mid-show walk-in, eating≠first, battery clamp, T=hour-of-day, drain semantics).
 2. **Pizza "יחידים" reading split (B15):** PLAN reads *lone person*; the CONFIG comment (NB cell 22 L313 "Single only") and COV L148-149 still encode the rejected *Single-type* reading.
 3. **DJ A-R M value (S2):** the CONFIG comment records that PLAN.md *initially* claimed M=1/30; reconciled to 1/15 — now consistent, kept here as provenance.
-4. **EVENT_NODE_EDGE_SPEC.md is "partially superseded"** (its own 2026-05-30 banner): pre-audit text (FG-inclusive EarlyExitCheck, E4 "confirm with team") is reconciled via inline `[2026-05-30]` notes; PLAN wins on any residual conflict.
+4. **EVENT_NODE_EDGE_SPEC.md** was reconciled with the 2026-05-30 audit (FG-exempt EarlyExitCheck, E4 resolved) via inline `[2026-05-30]` notes; the notebook/PLAN win on any residual conflict.
 
 ---
 

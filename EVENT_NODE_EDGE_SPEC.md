@@ -4,9 +4,9 @@
 2026-05-29 validation session (Ido). Validated against `Course Project 2026B.pdf` (ground truth)
 and PLAN.md §5–§9 + Appendix A.
 
-> ⚠️ **PARTIALLY SUPERSEDED (banner added 2026-05-30).** This file was authored **2026-05-29**, *before*
-> the 2026-05-30 audit decisions. **Where it conflicts with PLAN.md, PLAN.md wins.** The deltas are
-> folded in as inline `[2026-05-30]` notes below; the load-bearing ones for partners:
+> **Reconciled reference (updated 2026-06-02).** Authored 2026-05-29, then reconciled with the later
+> audit decisions via inline `[2026-05-30]` notes below. **The notebook is the source of truth** — on any
+> conflict, it (and PLAN.md) win. The load-bearing corrections folded in, for partners:
 > - **A1-2 — FriendsGroups are EXEMPT from `EarlyExitCheck`** (the MainStage farthest-10). The +15
 >   timer is armed **only for non-FG** entities (Couple/Single), on **every** admission path (batch /
 >   walk-in / rolling). Read every `EarlyExitCheck` mention below as **non-FG**. The original routing
@@ -17,10 +17,6 @@ and PLAN.md §5–§9 + Appendix A.
 > - **B2 — routing is centralized in the 2-step drain-aware helper `advance_itinerary_or_exit(E)`**
 >   (PLAN §8): Step 1 = next *performable* activity (festival-open ∧ itinerary-remaining), else Step 2 =
 >   park (stayer) / `EndOfStay` (leaver / final day). Every completion handler routes through it.
-
-> **Not in PLAN.md, by request** — all session decisions live here. §8 lists the PLAN edits to fold
-> in later (only when editing PLAN is approved). The diagram session consumes §5 + §7; the partners
-> (handlers/helpers) consume §1 + §3 + §4.
 
 ---
 

@@ -31,7 +31,7 @@ When you (Yonatan / Etan) pick up this notebook, please:
 ## Spec §"להלן כמה דגשים חשובים" — Project framing
 
 - [ ] **[USER M3]** Implement sampling algorithm before sampling random numbers (Box-Muller for normal, inverse transform, composition, OR acceptance-rejection).
-- [x] **[USER M2]** Fit distributions for the two sheets in `samples_for_simulation.xlsx` — FriendsGroup arrivals: **Gamma**(α≈1.239, β≈1.106) — switched from Exp after moment-based analysis; MainStage duration: **Normal**(μ≈45.90, σ≈8.93). Both pass KS + Chi²(k=12) at α=0.05.
+- [x] **[USER M2]** Fit distributions for the two sheets in `samples_for_simulation.xlsx` — FriendsGroup arrivals: **Gamma**(r≈1.239, λ≈0.904) — switched from Exp after moment-based analysis; MainStage duration: **Normal**(μ≈45.90, σ≈8.93). Both pass KS + Chi²(k=12) at α=0.05.
 - [ ] **[PARTNERS]** Event-driven modeling of current state; modular + readable code (OOP, Top-Down).
 - [ ] **[PARTNERS]** Choose 2–3 KPIs (we've pre-chosen: satisfaction at exit / avg+max queue wait / revenue — confirm in §4).
 - [ ] **[PARTNERS]** Test alternatives within 1,000,000 NIS budget; justify statistically + logically.
@@ -72,7 +72,7 @@ When you (Yonatan / Etan) pick up this notebook, please:
 
 **1. FriendsGroup**
 - [ ] **[USER M3]** Group size: DiscreteUniform[3,6].
-- [x] **[USER M2]** / [ ] **[USER M3]** Arrival rate: from xlsx — Gamma(α≈1.239, β≈1.106) fitted (M2 done). M3 will sample via **Acceptance-Rejection with an Exponential envelope** (Gamma has no closed-form inverse CDF for non-integer shape; A-R is course-taught + mandatory for DJ stage anyway).
+- [x] **[USER M2]** / [ ] **[USER M3]** Arrival rate: from xlsx — Gamma(r≈1.239, λ≈0.904) fitted (M2 done). M3 will sample via **Acceptance-Rejection with an Exponential envelope** (Gamma has no closed-form inverse CDF for non-integer shape; A-R is course-taught + mandatory for DJ stage anyway).
 - [ ] **[PARTNERS]** Arrive 09:00–13:00, Day 1 only.
 - [ ] **[USER M4]** With p=0.7, group stays overnight (continues to Day 2).
 - [ ] **[PARTNERS]** Itinerary: one show of each genre + all stations, shortest-queue priority.

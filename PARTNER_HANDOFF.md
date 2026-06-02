@@ -92,4 +92,4 @@ Per-member parallel service at Entry/Charging/Merch/BodyArt (a finished member f
 - **Class source + smoke test** — `m4_classes.py` (run `python m4_classes.py`; standalone, all checks pass).
 - **Spec** — `Course Project 2026B.pdf`.
 
-*(This file supersedes the temporary `M4_CLASSES_SESSION_BRIEF.md` and `DECISIONS_INVENTORY_BRIEF.md`, which were build-session scaffolding and can be deleted.)*
+*(This file supersedes the former build-session briefs `M4_CLASSES_SESSION_BRIEF.md` and `DECISIONS_INVENTORY_BRIEF.md`, now removed.)*

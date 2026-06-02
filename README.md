@@ -13,19 +13,20 @@ Event-driven simulation of the two-day **Queuechella** music festival, for the S
 ## Repository layout
 | Path | What it is |
 |---|---|
-| `Queuechella_Simulation.ipynb` | **The deliverable.** Master notebook (developed locally, delivered in Colab). |
-| `PLAN.md` | **Single source of truth** — event model, design decisions, milestones, sampling/OOP plan. Read this first. |
+| `Queuechella_Simulation.ipynb` | **The deliverable and source of truth.** Master notebook (developed locally, delivered in Colab). |
+| `PARTNER_HANDOFF.md` | **Start here to continue the work** — notebook map, architecture, class interface, build order, open flags. |
+| `PLAN.md` | Design reference — event model, design decisions, milestones, sampling/OOP plan. (The notebook is the source of truth; docs are synced to it.) |
 | `instructions_coverage.md` | Spec checklist (every spec bullet → a checkbox) + partner handoff notes. |
 | `Course Project 2026B.pdf` | The authoritative assignment spec. |
 | `samples_for_simulation.xlsx` | Empirical data for distribution fitting (2 sheets). |
 | `example solution.ipynb` | Lecturer's example — structural + report-style reference. |
-| `EVENT_NODE_EDGE_SPEC.md` | Detailed event node/edge reference (partially superseded by PLAN — see its top banner). |
+| `EVENT_NODE_EDGE_SPEC.md` | Event node/edge + routing-matrix reference for the run loop (reconciled with the notebook). |
 | `diagrams/` | Distribution-fit plots; `diagrams/event diagrams/` holds the built event diagram + D1 handling diagram. |
 
 ## Status
 - **M0** setup, **M2** distribution fitting (Gamma + Normal), **M3** sampling (`Sampler`) — done.
 - **M1** pre-work diagrams — event diagram + D1 built **and embedded** in notebook §3; D2 + D3 still to build/embed.
-- **M4** OOP class skeleton — stubs in place, being fleshed out.
-- **M5** handoff package, then partners take the event-logic run loop, KPIs, alternatives, and report polish.
+- **M4** OOP class layer — built, integrated into the notebook (§7–§13), and documented with per-class design decisions. **Done.**
+- **M5** handoff package — `PARTNER_HANDOFF.md` done. Partners now take the event-logic run loop, KPIs, alternatives, and report polish.
 
-See **`PLAN.md`** for the full plan and every locked design decision.
+See **`PARTNER_HANDOFF.md`** to continue, **`PLAN.md`** for the full design, and notebook §7–§11 + **`DECISIONS_INVENTORY.md`** for the decisions.
