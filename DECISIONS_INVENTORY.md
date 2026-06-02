@@ -34,7 +34,7 @@ Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `
 
 **B5. Shortest-queue = queue **length in people**, ties broken deterministically by canonical venue order.**
 *Spec basis:* silent — *"העדיפות לפי התור הקצר ביותר"* doesn't define the metric or tie-break.
-*Our choice:* compare the number of people waiting (sum of entity sizes, `QueueServer.people_waiting()`); break ties by a fixed canonical venue order (the `itinerary_tiebreak` RNG stream is consequently unused). **[Updated 2026-06-02: was entity-count; switched to people-count, which better reflects the actual wait — a queue of two 6-person groups is a longer wait than three singles.]**
+*Our choice:* compare the number of people waiting (sum of entity sizes, `QueueServer.people_waiting()`); break ties by a fixed canonical venue order (deterministic, so no RNG stream is needed for tie-breaking). **[Updated 2026-06-02: was entity-count; switched to people-count, which better reflects the actual wait — a queue of two 6-person groups is a longer wait than three singles.]**
 *Found in:* PLAN §7.1 L248 ("length drives shortest-queue"); m4 flag F1 L21-25 + L332; EDGE §1 (`select_next_activity`).
 *Alternative reading:* entity-count (the original implementation); random tie-break; or expected-wait instead of head-count.
 
