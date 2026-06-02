@@ -34,11 +34,11 @@ Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `
 *Found in:* m4 flag F2 L26-29; EDGE §6 matrix (abandon→next station); PLAN §8 D1 L286-296 (routes via `advance_itinerary_or_exit`).
 *Alternative reading:* re-insert the abandoned station later in the itinerary.
 
-**B5. Shortest-queue = queue **length in entities**, ties broken deterministically by canonical venue order.**
+**B5. Shortest-queue = queue **length in people**, ties broken deterministically by canonical venue order.**
 *Spec basis:* silent — *"העדיפות לפי התור הקצר ביותר"* doesn't define the metric or tie-break.
-*Our choice:* compare number of entities in queue; break ties by a fixed canonical venue order (the `itinerary_tiebreak` RNG stream is consequently unused).
+*Our choice:* compare the number of people waiting (sum of entity sizes, `QueueServer.people_waiting()`); break ties by a fixed canonical venue order (the `itinerary_tiebreak` RNG stream is consequently unused). **[Updated 2026-06-02: was entity-count; switched to people-count, which better reflects the actual wait — a queue of two 6-person groups is a longer wait than three singles.]**
 *Found in:* PLAN §7.1 L248 ("length drives shortest-queue"); m4 flag F1 L21-25 + L332; EDGE §1 (`select_next_activity`).
-*Alternative reading:* random tie-break; or measure by people-count / expected wait instead of entity-count.
+*Alternative reading:* entity-count (the original implementation); random tie-break; or expected-wait instead of head-count.
 
 **B6. Food court is the sole exception to "move as one unit."**
 *Spec basis:* given that *"חבר קבוצה/אחד מבני הזוג לא ימשיך לפעילות הבאה עד שכלל חבריו סיימו"*; **silent** on whether members may split anywhere.
