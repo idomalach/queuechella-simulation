@@ -7,10 +7,12 @@ and PLAN.md §5–§9 + Appendix A.
 > **Reconciled reference (updated 2026-06-02).** Authored 2026-05-29, then reconciled with the later
 > audit decisions via inline `[2026-05-30]` notes below. **The notebook is the source of truth** — on any
 > conflict, it (and PLAN.md) win. The load-bearing corrections folded in, for partners:
-> - **A1-2 — FriendsGroups are EXEMPT from `EarlyExitCheck`** (the MainStage farthest-10). The +15
->   timer is armed **only for non-FG** entities (Couple/Single), on **every** admission path (batch /
->   walk-in / rolling). Read every `EarlyExitCheck` mention below as **non-FG**. The original routing
->   matrix §6 `EarlyExitCheck` row has been corrected to drop FG.
+> - **A1-2 — the MainStage farthest-10 applies to ALL entities; full-show entities retry.** Every
+>   admitted entity gets an `EarlyExitCheck`(+15), on every admission path (batch / walk-in / rolling).
+>   On a Bernoulli(0.5) leave, FriendsGroups and Singles have not completed the required full show, so
+>   they re-queue it (a MainStage retry, not a route onward) and do not advance their itinerary until
+>   the show part is done; Couples move on to their next activity. **(Updated 2026-06-02 from the
+>   earlier "FG exempt" reading — exempting full-show entities killed MainStage turnover.)**
 > - **A2-6 — overnight stayers (FG *and* Couple) restart a FRESH day-2 itinerary** via `Day2Resume`
 >   (finished or not; any day-1 remainder is discarded). The E4 "confirm with the team" question is
 >   **RESOLVED: restart at a show, do not exit.**
@@ -49,7 +51,7 @@ and PLAN.md §5–§9 + Appendix A.
 | **N0** | **All 23 nodes confirmed**, none added/removed/merged/re-split. | Passed both Appendix-A tests vs the PDF (see §2). | The 23 `Event` subclasses in PLAN §6 are the final set; names are stable. |
 | **C** | **`EndOfFestival` is a 7th INIT (zigzag), NOT scheduled by `EndOfDay1`.** | Fixed-clock terminal event (20:00 d2), symmetric to `EndOfDay1`; no causal dependency on day-1 processing; removes double-schedule risk. | Seed `EndOfFestival` into the FEL at t=0. `EndOfDay1`'s handler must **not** schedule it. |
 | **C2** | **`EndOfFestival` DRAINS** (not a hard stop). | Consistency with the day-1 drain; avoids scoring the same mid-activity situation differently on d2 vs d1. | At 20:00 d2 let in-flight events finish (clock runs past 20:00); their end-handlers route to `EndOfStay`. `EndOfFestival`'s handler is a **safety-net sweep**: send to `EndOfStay` only entities with *no pending completion* (idle / stuck in a show queue). Run loop must keep popping the FEL until drained. |
-| **D3** | **Mid-show walk-in admission, BOTH stages.** An entity routed to a running show with free capacity enters immediately (doesn't wait for the next `ShowStart`). Shows may also start under-capacity. | Realistic; spec only specified the vacated-spot rule, this generalizes it. | `try_admit_show(E, stage)` helper: if a show is running and `spots_used < cap`, admit now (walk-in); else queue for the next `ShowStart`. **MainStage walk-in must schedule the entrant's `EarlyExitCheck(+15)`** (`[2026-05-30]` non-FG only — A1-2); SideStage walk-in schedules nothing (no farthest-10). Batch admit at `ShowStart` + vacated-spot rolling admit still apply. |
+| **D3** | **Mid-show walk-in admission, BOTH stages.** An entity routed to a running show with free capacity enters immediately (doesn't wait for the next `ShowStart`). Shows may also start under-capacity. | Realistic; spec only specified the vacated-spot rule, this generalizes it. | `try_admit_show(E, stage)` helper: if a show is running and `spots_used < cap`, admit now (walk-in); else queue for the next `ShowStart`. **MainStage walk-in must schedule the entrant's `EarlyExitCheck(+15)`** (all entities — A1-2); SideStage walk-in schedules nothing (no farthest-10). Batch admit at `ShowStart` + vacated-spot rolling admit still apply. |
 | **D4** | **Eating is never the first festival activity.** No `EndEntry → EndOrder`. | The food detour fires only after a *real* itinerary activity completes in-window; clearing Entry doesn't count. | The food-gate check (`maybe_start_food(E)`) runs at activity-completion handlers (shows/stations/DJ/abandon), **not** at `EndEntry`. Gate `food_done_today` is entity-level, set True on first in-window eligibility. |
 | **D5** | **`EndOfStay` is a receive-only member of the `STATIONS` box.** Arrows point only *into* it. | Lets every `X→box` edge fold in `X→EndOfStay`, collapsing the 8-edge exit fan-in to ~2 drawn things. Sound because every router that reaches the cluster can also end a visit (audited, §4). | **Diagram only.** In code `EndOfStay` is an ordinary terminal event; `select_next_activity` returns `None` → schedule `EndOfStay`. The one exception drawn separately is `EndOfFestival → EndOfStay` (node-specific), because `EndOfFestival` never schedules a station. |
 | **R1** | **Routing core drawn as a `STATIONS` super-node box** {Photo, Charge, Merch, Body (+`EndOfStay` per D5)}. | Collapses the cluster-internal all-to-all (K₄) and the many-to-many cluster-entry into readable bundles. | None (diagram device). Code routes per-entity. |
@@ -57,7 +59,7 @@ and PLAN.md §5–§9 + Appendix A.
 | **R3** | **Specific-node-vs-box rule:** bind an edge to the box only when the source/target reaches *any* member; bind to a specific node when only one member is involved. | Prevents false "any-member" claims. | Node-specific edges (the only ones): `EndEntry→EndService@Merch`, `EndService@Merch→EndAtDJstage`, `EndOfFestival→EndOfStay`. Tells partners exactly which transitions are single-target. |
 | **R4** | **Honest fan-ins, NO representative edges.** | Edge labels are forbidden by the convention, so a drawn subset would read as a false/complete claim. Every drawn edge is real; completeness lives in §6 + handling diagrams. | Handlers must actually implement every listed transition; none are illustrative. |
 | **E1** | **`ShowStart ↔ ShowEnd` mutual — the next `ShowStart` is scheduled by `ShowEnd`** (at `now+break`), not by `ShowStart`. | Break demonstrably begins at show-end; avoids double-specifying the cycle. | In `ShowEnd@*` handler: if `shows_active ∧ start<20:00`, schedule next `ShowStart@same` at `now+break` (10 main / 5 side). `ShowStart` does **not** self-schedule. (PLAN §8 D2 step 6 to be removed — §8.) |
-| **E2** | **`EarlyExitCheck → EarlyExitCheck` self-loop (recommended).** | When an early-leaver frees a main spot, rolling admission pulls the queue head *into the show*; per spec it gets its own +15 timer. | In `EarlyExitCheck` handler, after a Bernoulli(0.5) leave frees spots: roll-admit queue head → schedule its `EarlyExitCheck(+15)`. (Same +15 also scheduled by walk-in and by `ShowStart` batch.) **`[2026-05-30]` Every +15 timer is armed for non-FG entrants only — A1-2.** |
+| **E2** | **`EarlyExitCheck → EarlyExitCheck` self-loop (recommended).** | When an early-leaver frees a main spot, rolling admission pulls the queue head *into the show*; per spec it gets its own +15 timer. | In `EarlyExitCheck` handler, after a Bernoulli(0.5) leave frees spots: roll-admit queue head → schedule its `EarlyExitCheck(+15)`. (Same +15 also scheduled by walk-in and by `ShowStart` batch.) **Every +15 timer is armed for all entrants; on a leave, full-show entities retry the show — A1-2.** |
 | **E3** | **`EndEntry → EndService@Merch`** (fix; v1 had a spurious `EndEntry → EndService@BodyArt`). | No entity's first activity is BodyArt; Single's first stop is Merch. | `EndEntry` (last member) routes Single → Merch. FG/Couple first stop = a show (queue/walk-in). |
 | **E4** | **`Day2Resume` is incoming-only** (from `EndOfDay1`); resets `food_done_today` and resumes the stayer at a **concert** (undrawn show-queue join). Does NOT route to stations. | FG/Couple begin a day at a show; Singles never stay. | `Day2Resume(E)` handler: `food_done_today=False`; re-select next activity (a show) and join its queue. **`[2026-05-30]` RESOLVED (A2-6):** an FG that bought lodging **restarts a fresh day-2 itinerary** (at a show) whether or not its day-1 itinerary finished; any day-1 remainder is discarded. This applies to *all* overnight stayers (FG and Couple). (The earlier "confirm with the team" is settled — restart, not exit.) |
 | **E5** | **One DJ node:** `EndAtDJstage` (PLAN/spec name) = `EndDJ` (id in `gen_excali_event.py`). | Avoid the two-node confusion. | Single DJ completion event class. |
@@ -146,7 +148,7 @@ Notation: **[init]** seeded at t=0 · **[self]** schedules its own next instance
 4. `EndEntry` — **[self]** free booth → admit next same-entity member, else next entity;
    on **last** member route to first activity: **→ `EndService@Merch`** *(node-specific; Single)*;
    **→ `EndAtDJstage`** (FG first-pick = DJ); **→ `EarlyExitCheck`** (Couple first = Main, walk-in,
-   D3 — `[2026-05-30]` FG also walks into Main but is **EarlyExit-exempt, A1-2**, so no +15 timer);
+   D3 — FG also walks into Main and gets a +15 timer like all entities, A1-2);
    **⇢ Main/Side queue (undrawn)**. *No `→EndOrder` (D4).*
 
 **Show cycles**
@@ -191,7 +193,7 @@ walk-in) · **⇢ show queue (undrawn)** (Couple alternation).
     **→ `EndOrder`** (in-window food); **⇢ show queue (undrawn)**. *Commit-on-first: cancelled when
     the entity's first member starts service.*
 
-**MainStage farthest-10** (`[2026-05-30]` armed for **non-FG entrants only** — FriendsGroups are exempt, A1-2)
+**MainStage farthest-10** (armed for all entrants; full-show entities retry on leave, A1-2)
 18. `EarlyExitCheck` — **[self]** (E2, vacated-spot roll-admit → new entrant's +15); on a
     Bernoulli(0.5) leave, route next: **→ box** (station; `EndOfStay` folded); **→ `EndAtDJstage`**;
     **→ `EndOrder`** (food); **⇢ show queue (undrawn)**. **Incoming fan-in** (D3 walk-in + batch +
@@ -285,8 +287,9 @@ Cell = entity types making the move; **(q)** = undrawn show queue-join; **✦** 
 | `Day2Resume` | F,C | F,C | F | — | — | — | — | — | — |
 
 Couples never use DJ; Singles' only station is Merch (done first). Union ≈ all-to-all among the
-non-show venues — which is why the box + fan-ins exist. **`[2026-05-30]` The `EarlyExitCheck` row
-holds no `F`: FriendsGroups are exempt from the farthest-10 early exit (A1-2), so they never fire it.**
+non-show venues — which is why the box + fan-ins exist. **`[2026-06-02]` Under the all-entities model (A1-2) every type fires `EarlyExitCheck`. The onward-routing
+cells in this row reflect Couples moving on; FriendsGroups and Singles instead re-queue the show (a
+MainStage retry / self-loop), so re-derive their cells from the retry rule when building the loop.**
 
 ---
 

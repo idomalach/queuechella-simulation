@@ -52,9 +52,11 @@ Simulation   ── owns clock + FEL + all the above; schedule()/pop_next_event(
 2. **`Simulation.run()`** (§13). The scaffold is ready — `schedule()`, `pop_next_event()` (pops earliest, advances `self.clock`), and the `rng/sampler/activities/kpi` handles. The loop is roughly: seed the bootstrap events → `while self.fel: ev = self.pop_next_event(); ev.execute(self)` → stop at day/festival end. Routing per entity uses `entity.select_next_activity(self.activities)`.
 3. **Analysis §14–§18.** Terminating sim, **no warmup deletion**, N sized for relative precision 0.1 with Bonferroni-split α; alternatives compared with a **paired t-test under CRN** (reseed only the streams an alternative touches — see §4). Requirements: PLAN.md §5.1, §9.
 
+**Tick off `instructions_coverage.md` as you complete each section.**
+
 ---
 
-## 4. The interface you call (signatures are in §12–§13 / `m4_classes.py`)
+## 4. The interface you call (signatures are in notebook §7–§13)
 
 - **`Simulation`** — `.clock`, `.day`, `.fel`, `.rng`, `.sampler`, `.activities` (venue dict), `.entities`, `.kpi`; `schedule(event)`, `pop_next_event()`. You write `run()`.
 - **`Event`** — subclass it; `__init__(self, time)` (call `super().__init__(time)`), implement `execute(self, simulation)`.
@@ -67,7 +69,7 @@ Simulation   ── owns clock + FEL + all the above; schedule()/pop_next_event(
 
 ---
 
-## 5. Open decisions to settle (flagged in `m4_classes.py`, top block)
+## 5. Open decisions to settle (in the run loop)
 
 - **F1** structural picks (couple's show/station, tie-break) use named streams directly — wrap in `Sampler` or keep in `Group`.
 - **F2** an abandoned station is dropped, not retried (the itinerary slot is consumed on selection).
@@ -80,7 +82,7 @@ Simulation   ── owns clock + FEL + all the above; schedule()/pop_next_event(
 
 ## 6. Rules the run loop must honor (graders probe these)
 
-Per-member parallel service at Entry/Charging/Merch/BodyArt (a finished member frees its server immediately; the entity advances only when its **last** member finishes); abandonment at exactly the 4 service stations, **commit-on-first** (cancel the timer when the entity's first member starts service); FriendsGroups **exempt** from the MainStage farthest-10; satisfaction clamped to [0,10] on every change; shortest-queue measured in **people**; food gate **once per entity per day**. The full reasoning is in the notebook §7–§11 decision write-ups and `DECISIONS_INVENTORY.md` (58 decisions).
+Per-member parallel service at Entry/Charging/Merch/BodyArt (a finished member frees its server immediately; the entity advances only when its **last** member finishes); abandonment at exactly the 4 service stations, **commit-on-first** (cancel the timer when the entity's first member starts service); the MainStage farthest-10 applies to **all entities** (on a leave, full-show entities — FG/Single — re-queue the show and don't advance until it's done; Couples move on, so a show counts as completed only on full attendance); satisfaction clamped to [0,10] on every change; shortest-queue measured in **people**; food gate **once per entity per day**. The full reasoning is in the notebook §7–§11 decision write-ups and `DECISIONS_INVENTORY.md` (58 decisions).
 
 ---
 
@@ -89,7 +91,7 @@ Per-member parallel service at Entry/Charging/Merch/BodyArt (a finished member f
 - **Design** — `PLAN.md` (post-audit source of truth; §-numbers are PLAN's own, not the notebook's).
 - **Event catalog + routing matrix** — `EVENT_NODE_EDGE_SPEC.md`.
 - **Decisions** — notebook §7–§11 (prose) + `DECISIONS_INVENTORY.md` (full, cited).
-- **Class source + smoke test** — `m4_classes.py` (run `python m4_classes.py`; standalone, all checks pass).
+- **Class source** — notebook §7–§13 (`Customer` … `Simulation`).
 - **Spec** — `Course Project 2026B.pdf`.
 
 *(This file supersedes the former build-session briefs `M4_CLASSES_SESSION_BRIEF.md` and `DECISIONS_INVENTORY_BRIEF.md`, now removed.)*

@@ -2,7 +2,7 @@
 
 **Scope.** Every judgment call we made because the spec (`Course Project 2026B.pdf`) was **silent, ambiguous, or needed an implementation interpretation.** Facts the spec states verbatim (capacities, prices, printed probabilities, named distributions, windows, costs) are **excluded** — they are listed in the boundary note at the end. Deduplicated, one entry per decision, with all citation sites. Doc-vs-doc conflicts are flagged inline and summarised at the end.
 
-Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `M4_CLASSES_SESSION_BRIEF.md` (removed; folded into `PARTNER_HANDOFF.md`); `COV` = `instructions_coverage.md`; `NB cell N` = `Queuechella_Simulation.ipynb` cell N; `m4` = `m4_classes.py`.
+Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `M4_CLASSES_SESSION_BRIEF.md` (removed; folded into `PARTNER_HANDOFF.md`); `COV` = `instructions_coverage.md`; `NB cell N` = `Queuechella_Simulation.ipynb` cell N; `m4` = `m4_classes.py` (retired; classes now live in notebook §7–§13, the F-flags in `PARTNER_HANDOFF.md`).
 
 > **⚠️ The notebook's §2 "Design Decisions Log" (NB cell 7) is STALE** — a 13-item list that predates the 2026-05-30 audit. It contradicts PLAN §9 on six points (entries B7, B8, B10, B13, S1, S3 below) and omits ~9 later decisions. Treat PLAN §9 as authoritative; NB cell 7 must be rewritten before submission.
 
@@ -46,12 +46,12 @@ Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `
 *Found in:* PLAN §5.2 L90, §5.4 L119, §5.5 L131; M4B §4.
 *Alternative reading:* the whole entity goes to one restaurant together (no split).
 
-**B7. FriendsGroups are EXEMPT from the MainStage farthest-10 early exit; Couples and Singles are not.**
-*Spec basis:* ambiguous — FG *"שהות מלאה בכל הופעה"* vs farthest-10 *"עשרת הישויות... יעזבו 15 דקות לאחר שנכנסו בהסתברות 0.5"*; Single's *"(באופן מלא)"* attaches to the DJ show.
-*Our choice:* never arm `EarlyExitCheck` for FG (full-stay overrides); Couples & Singles remain subject (Single's "full" modifies DJ, not MainStage). **Reverses the earlier C2-m7 call.**
-*Found in:* PLAN §9 #4 L352, §5.3 L97, §8 D2 L319/L323; EDGE banner A1-2 + §6 note L293; M4B §5 L159.
-*Conflict:* **NB cell 7 #5 is STALE** — describes the farthest-10 with no FG exemption.
-*Alternative reading:* apply the farthest-10 to every entity including FG.
+**B7. The MainStage farthest-10 early exit applies to ALL entities; full-show entities (FriendsGroup, Single) retry the show on a leave, Couples move on.**
+*Spec basis:* ambiguous — FG *"שהות מלאה בכל הופעה"* and Single's *"(באופן מלא)"* require a full show, vs the farthest-10 *"עשרת הישויות... יעזבו 15 דקות לאחר שנכנסו בהסתברות 0.5"*.
+*Our choice:* every admitted entity gets an `EarlyExitCheck`(+15). On a Bernoulli(0.5) leave, FriendsGroups and Singles have not completed the required full show, so they re-queue it and do not advance their itinerary until the show part is done; Couples (no full-show requirement) proceed to their next activity.
+*Found in:* notebook §8 (decision) + §9 `MainStage.early_exit_applies`; PLAN §5.3 / §9; EDGE banner A1-2 + §6 matrix note.
+*Rationale (updated 2026-06-02 from the earlier "FG exempt" reading):* exempting the full-show entities would leave MainStage with almost no turnover, gutting the spec's farthest-10 dynamic; retry-to-complete keeps the turnover, honors the full-show requirement, and is robust to whether Single's "fully" means the DJ show or all shows.
+*Alternative reading:* exempt the full-show entities entirely (the earlier call — rejected for the turnover problem); or apply the leave with no retry (full-show entities lose the show).
 
 **B8. Couple overnight decision uses the AVERAGE of the two members' satisfaction (> 7).**
 *Spec basis:* ambiguous — *"מדד שביעות הרצון גבוה מ-7"* but satisfaction is per-person.
@@ -413,7 +413,7 @@ Citation keys: `PLAN` = `PLAN.md`; `EDGE` = `EVENT_NODE_EDGE_SPEC.md`; `M4B` = `
 1. **NB cell 7 (§2 Design Decisions Log) is stale** and contradicts PLAN §9 on six points: AbandonQueue members-in-service branch (#1 → M2), no FG farthest-10 exemption (#5 → B7), FG exits on itinerary-end (#7 → B10), couple overnight "one member" vs average (#8 → B8), Photo per-visitor vs per-entity (#10 → B17), FoodCourt "has abandonment" + "per visitor" vs no-abandonment/per-entity (#12 → M3/B13). It also lists only 13 items vs PLAN's 22 (omits terminating-sim, paired t-test, per-person revenue, pizza consolidation, per-member parallel service, mid-show walk-in, eating≠first, battery clamp, T=hour-of-day, drain semantics).
 2. **Pizza "יחידים" reading split (B15):** PLAN reads *lone person*; the CONFIG comment (NB cell 22 L313 "Single only") and COV L148-149 still encode the rejected *Single-type* reading.
 3. **DJ A-R M value (S2):** the CONFIG comment records that PLAN.md *initially* claimed M=1/30; reconciled to 1/15 — now consistent, kept here as provenance.
-4. **EVENT_NODE_EDGE_SPEC.md** was reconciled with the 2026-05-30 audit (FG-exempt EarlyExitCheck, E4 resolved) via inline `[2026-05-30]` notes; the notebook/PLAN win on any residual conflict.
+4. **EVENT_NODE_EDGE_SPEC.md** was reconciled with the 2026-05-30 audit (the MainStage early-exit model, E4 resolved) via inline `[2026-05-30]` notes; the notebook/PLAN win on any residual conflict.
 
 ---
 
