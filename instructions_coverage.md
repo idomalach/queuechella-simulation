@@ -7,14 +7,9 @@ Owner tag: **[USER]** = Ido (milestones M0–M5), **[PARTNERS]** = Yonatan + Eta
 
 ## 📌 Partner handoff — read this first
 
-When you (Yonatan / Etan) pick up this notebook, please:
+**To continue the work, start with `PARTNER_HANDOFF.md`** (notebook map, architecture, class interface, build order, open decisions). This file is the **spec-coverage checklist** — tick a box when its spec requirement is met.
 
-1. **Maintain the GenAI usage log** in §20 of the notebook. Every time you use a GenAI tool, add a row (date, tool, purpose, short description). This becomes the source for the official declaration form at submission.
-2. **Check off items below** as you complete them.
-3. **Consult §2 of the notebook** — the "13-item Design Decisions Log" (inside a yellow internal div) documents every spec ambiguity that was resolved during planning. If you hit a question about spec interpretation, look there first.
-4. **CONFIG cell** at the top of the notebook documents the alternatives ↔ parameter mapping. Flip the relevant fields when implementing alternatives in §17.
-5. **Sampler index** is in §6 — every sampler is in the `Sampler` class, called via `sampler.<name>()`. RNG stream naming is in §12 (`RNGStreams`).
-6. **Internal yellow divs** (marked `INTERNAL — DELETE BEFORE SUBMISSION`) must be regex-stripped before final submission. There's a deletion checklist at the top of the notebook.
+Two ongoing reminders: maintain the **GenAI usage log** in notebook §19 (a row per AI use), and strip the internal `INTERNAL — DELETE BEFORE SUBMISSION` divs (deletion checklist at the top of the notebook) before final submission.
 
 ---
 
