@@ -16,3 +16,12 @@ env/
 הרצאות כיתה/
 מעבדות/
 סילבוס סימולציה.pdf
+presentation guidelines.docx
+
+# ── Presentation deck (edited out-of-band, shared via WhatsApp) ──
+# The slide deck and its exports are collaborated on separately and are not a
+# repo deliverable, so they stay out of the shared repo.
+*Deck*.html
+*Deck*_files/
+*Deck*.pptx
+*Deck*.pdf
